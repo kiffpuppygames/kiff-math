@@ -1,12 +1,12 @@
 # kiff-math
-Liniar Algerbra Library based on kmath (https://github.com/zig-gamedev/zig-gamedev/tree/main/libs/kmath). I did not for from kmath as there are alot of other libs in zig-gamedev and I am trying to keep this repo focused.
+64 bit Linear Algebra Library based on zmath (https://github.com/zig-gamedev/zig-gamedev/tree/main/libs/kmath). I did this as zmath is embeded in zig-gamedev and us such creates alot bloat in you repos when all you want to use is the math lib. In addition zmath does not support 64bit. Which is the ultimate goal of this repo.
 
 # Goals
 - 64bit
 - Keep up with zig master
-- Stand alone and able to be used in any project without additional dependancies or bloated repos
+- Stand alone and able to be used in any project without additional dependancies or bloated repos.
 
-# kmath v0.10.0 - SIMD math library for game developers
+# Based on kmath v0.10.0 - SIMD math library for game developers
 
 Tested on x86_64 and AArch64.
 
