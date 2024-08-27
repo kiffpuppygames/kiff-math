@@ -9,21 +9,20 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'
+      branch:
+        description: 'Branch to run the workflow on'
         required: true
-        default: 'warning'
-        type: choice
-        options:
-        - info
-        - warning
-        - debug
+        default: 'main'
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.inputs.branch }}
 
     - name: Setup Zig
       uses: mlugg/setup-zig@v1
