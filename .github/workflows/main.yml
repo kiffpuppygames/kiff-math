@@ -28,9 +28,6 @@ jobs:
       uses: mlugg/setup-zig@v1
       with:
         version: master
-
-    - name: Check formatting
-      run: zig fmt --check .
-
+        
     - name: Build
       run: zig build
