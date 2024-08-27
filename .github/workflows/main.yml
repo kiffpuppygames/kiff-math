@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: mlugg/setup-zig@v1
+      with:
+        version: master
+
+    - name: Check formatting
+      run: zig fmt --check .
+
+    - name: Benchmark
+      run: zig build benchmark
+
+    - name: Archive kmath.zig
+      uses: actions/upload-artifact@v4
+      with:
+        name: kmath.zig
+        path: zig-out/src/kmath.zig
+        if-no-files-found: error
