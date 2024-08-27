@@ -23,8 +23,12 @@ An intro article can be found [here](https://zig.news/michalz/fast-multi-platfor
 ## Getting started
 
 Copy `kmath` into a subdirectory of your project and add the following to your `build.zig.zon` .dependencies:
-```zig
-    .kmath = .{ .path = "libs/kmath" },
+```
+    // https://github.com/kiffpuppygames/kiff-math
+    .kmath = .{ 
+        .url = "https://github.com/kiffpuppygames/kiff-math/archive/d4472648724ec560bb2ff9a882d131a75e5cff2b.tar.gz",
+        .hash = "12201293d4d33858f8cc5df3d464e2d694ec2c34e669e38509ef6391dbc164cbc3e2"
+    },
 ```
 
 Then in your `build.zig` add:
