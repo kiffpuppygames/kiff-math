@@ -32,8 +32,8 @@ jobs:
     - name: Build
       run: zig build test
 
-    - name: List Files in zig-out/bin
-      run: ls -la zig-out/bin
+    - name: Benchmark
+      run: zig build benchmark -Doptimize=ReleaseFast
 
     - name: Run Tests
       run: ./zig-out/bin/kmath-tests
