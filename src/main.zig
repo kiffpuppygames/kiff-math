@@ -1,3 +1,14 @@
+const std = @import("std");
+
+// pub fn main() void {
+//     const testing = std.testing;
+//     const kmath_tests = @import("tests.zig");
+//     _ = kmath_tests; // autofix
+
+//     // Run the tests
+//     testing.runAllTests();
+// }
+
 //--------------------------------------------------------------------------------------------------
 //
 // SIMD math library for game developers
