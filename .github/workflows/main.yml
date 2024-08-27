@@ -31,3 +31,6 @@ jobs:
         
     - name: Build
       run: zig build test
+
+    - name: Run Tests
+      run: ./zig-out/bin/kmath-tests
