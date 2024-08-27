@@ -1,13 +1,13 @@
 // ==============================================================================
 //
 // SIMD math library for game developers
-// https://github.com/michal-z/zig-gamedev/tree/main/libs/zmath
+// https://github.com/michal-z/zig-gamedev/tree/main/libs/kmath
 //
 // Should work on all OSes supported by Zig. Works on x86_64 and ARM.
 // Provides ~140 optimized routines and ~70 extensive tests.
 // Can be used with any graphics API.
 //
-// zmath uses row-major matrices, row vectors (each row vector is stored in a SIMD register).
+// kmath uses row-major matrices, row vectors (each row vector is stored in a SIMD register).
 // Handedness is determined by which function version is used (Rh vs. Lh),
 // otherwise the function works with either left-handed or right-handed view coordinates.
 //
@@ -348,7 +348,7 @@ pub fn load(mem: []const f32, comptime T: type, comptime len: u32) T {
     }
     return v;
 }
-test "zmath.load" {
+test "kmath.load" {
     const a = [7]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 };
     var ptr = &a;
     var i: u32 = 0;
@@ -374,7 +374,7 @@ pub fn store(mem: []f32, v: anytype, comptime len: u32) void {
         mem[i] = v[i];
     }
 }
-test "zmath.store" {
+test "kmath.store" {
     var a = [7]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 };
     const v = load(a[1..], F32x4, 3);
     store(a[2..], v, 4);
@@ -425,7 +425,7 @@ pub inline fn arrNPtr(ptr: anytype) [*]const f32 {
     comptime assert(T == Mat or T == F32x4 or T == F32x8 or T == F32x16);
     return @as([*]const f32, @ptrCast(ptr));
 }
-test "zmath.arrNPtr" {
+test "kmath.arrNPtr" {
     {
         const mat = identity();
         const f32ptr = arrNPtr(&mat);
@@ -442,7 +442,7 @@ test "zmath.arrNPtr" {
     }
 }
 
-test "zmath.loadArr" {
+test "kmath.loadArr" {
     {
         const camera_position = [3]f32{ 1.0, 2.0, 3.0 };
         const simd_reg = loadArr3(camera_position);
@@ -472,7 +472,7 @@ pub inline fn vecToArr4(v: Vec) [4]f32 {
 pub fn all(vb: anytype, comptime len: u32) bool {
     const T = @TypeOf(vb);
     if (len > veclen(T)) {
-        @compileError("zmath.all(): 'len' is greater than vector len of type " ++ @typeName(T));
+        @compileError("kmath.all(): 'len' is greater than vector len of type " ++ @typeName(T));
     }
     const loop_len = if (len == 0) veclen(T) else len;
     const ab: [veclen(T)]bool = vb;
@@ -483,7 +483,7 @@ pub fn all(vb: anytype, comptime len: u32) bool {
     }
     return result;
 }
-test "zmath.all" {
+test "kmath.all" {
     try expect(all(boolx8(true, true, true, true, true, false, true, false), 5) == true);
     try expect(all(boolx8(true, true, true, true, true, false, true, false), 6) == false);
     try expect(all(boolx8(true, true, true, true, false, false, false, false), 4) == true);
@@ -499,7 +499,7 @@ test "zmath.all" {
 pub fn any(vb: anytype, comptime len: u32) bool {
     const T = @TypeOf(vb);
     if (len > veclen(T)) {
-        @compileError("zmath.any(): 'len' is greater than vector len of type " ++ @typeName(T));
+        @compileError("kmath.any(): 'len' is greater than vector len of type " ++ @typeName(T));
     }
     const loop_len = if (len == 0) veclen(T) else len;
     const ab: [veclen(T)]bool = vb;
@@ -510,7 +510,7 @@ pub fn any(vb: anytype, comptime len: u32) bool {
     }
     return result;
 }
-test "zmath.any" {
+test "kmath.any" {
     try expect(any(boolx8(true, true, true, true, true, false, true, false), 0) == true);
     try expect(any(boolx8(false, false, false, true, true, false, true, false), 3) == false);
     try expect(any(boolx8(false, false, false, false, false, true, false, false), 4) == false);
@@ -526,7 +526,7 @@ pub inline fn isNearEqual(
     const temp = maxFast(delta, splat(T, 0.0) - delta);
     return temp <= epsilon;
 }
-test "zmath.isNearEqual" {
+test "kmath.isNearEqual" {
     {
         const v0 = f32x4(1.0, 2.0, -3.0, 4.001);
         const v1 = f32x4(1.0, 2.1, 3.0, 4.0);
@@ -566,7 +566,7 @@ pub inline fn isNan(
 ) @Vector(veclen(@TypeOf(v)), bool) {
     return v != v;
 }
-test "zmath.isNan" {
+test "kmath.isNan" {
     {
         const v0 = f32x4(math.inf(f32), math.nan(f32), math.nan(f32), 7.0);
         const b = isNan(v0);
@@ -585,7 +585,7 @@ pub inline fn isInf(
     const T = @TypeOf(v);
     return abs(v) == splat(T, math.inf(f32));
 }
-test "zmath.isInf" {
+test "kmath.isInf" {
     {
         const v0 = f32x4(math.inf(f32), math.nan(f32), math.snan(f32), 7.0);
         const b = isInf(v0);
@@ -613,7 +613,7 @@ pub inline fn isInBounds(
     const b1u = @as(Tu, @bitCast(b1));
     return @as(Tr, @bitCast(b0u & b1u));
 }
-test "zmath.isInBounds" {
+test "kmath.isInBounds" {
     {
         const v0 = f32x4(0.5, -2.0, -1.0, 1.9);
         const v1 = f32x4(-1.6, -2.001, -1.0, 1.9);
@@ -638,7 +638,7 @@ pub inline fn andInt(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     const v1u = @as(Tu, @bitCast(v1));
     return @as(T, @bitCast(v0u & v1u)); // andps
 }
-test "zmath.andInt" {
+test "kmath.andInt" {
     {
         const v0 = f32x4(0, @as(f32, @bitCast(~@as(u32, 0))), 0, @as(f32, @bitCast(~@as(u32, 0))));
         const v1 = f32x4(1.0, 2.0, 3.0, math.inf(f32));
@@ -662,7 +662,7 @@ pub inline fn andNotInt(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     const v1u = @as(Tu, @bitCast(v1));
     return @as(T, @bitCast(~v0u & v1u)); // andnps
 }
-test "zmath.andNotInt" {
+test "kmath.andNotInt" {
     {
         const v0 = f32x4(1.0, 2.0, 3.0, 4.0);
         const v1 = f32x4(0, @as(f32, @bitCast(~@as(u32, 0))), 0, @as(f32, @bitCast(~@as(u32, 0))));
@@ -684,7 +684,7 @@ pub inline fn orInt(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     const v1u = @as(Tu, @bitCast(v1));
     return @as(T, @bitCast(v0u | v1u)); // orps
 }
-test "zmath.orInt" {
+test "kmath.orInt" {
     {
         const v0 = f32x4(0, @as(f32, @bitCast(~@as(u32, 0))), 0, 0);
         const v1 = f32x4(1.0, 2.0, 3.0, 4.0);
@@ -720,7 +720,7 @@ pub inline fn xorInt(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     const v1u = @as(Tu, @bitCast(v1));
     return @as(T, @bitCast(v0u ^ v1u)); // xorps
 }
-test "zmath.xorInt" {
+test "kmath.xorInt" {
     {
         const v0 = f32x4(1.0, @as(f32, @bitCast(~@as(u32, 0))), 0, 0);
         const v1 = f32x4(1.0, 0, 0, 0);
@@ -744,7 +744,7 @@ test "zmath.xorInt" {
 pub inline fn minFast(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     return select(v0 < v1, v0, v1); // minps
 }
-test "zmath.minFast" {
+test "kmath.minFast" {
     {
         const v0 = f32x4(1.0, 3.0, 2.0, 7.0);
         const v1 = f32x4(2.0, 1.0, 4.0, math.inf(f32));
@@ -767,7 +767,7 @@ test "zmath.minFast" {
 pub inline fn maxFast(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     return select(v0 > v1, v0, v1); // maxps
 }
-test "zmath.maxFast" {
+test "kmath.maxFast" {
     {
         const v0 = f32x4(1.0, 3.0, 2.0, 7.0);
         const v1 = f32x4(2.0, 1.0, 4.0, math.inf(f32));
@@ -790,7 +790,7 @@ pub inline fn min(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     // This will handle inf & nan
     return @min(v0, v1); // minps, cmpunordps, andps, andnps, orps
 }
-test "zmath.min" {
+test "kmath.min" {
     // Calling math.inf causes test to fail!
     if (builtin.target.os.tag == .macos and builtin.target.cpu.arch == .aarch64) return error.SkipZigTest;
     {
@@ -834,7 +834,7 @@ pub inline fn max(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     // This will handle inf & nan
     return @max(v0, v1); // maxps, cmpunordps, andps, andnps, orps
 }
-test "zmath.max" {
+test "kmath.max" {
     // Calling math.inf causes test to fail!
     if (builtin.target.os.tag == .macos and builtin.target.cpu.arch == .aarch64) return error.SkipZigTest;
     {
@@ -914,7 +914,7 @@ pub fn round(v: anytype) @TypeOf(v) {
         return select(mask, r1, v);
     }
 }
-test "zmath.round" {
+test "kmath.round" {
     {
         try expect(all(round(splat(F32x4, math.inf(f32))) == splat(F32x4, math.inf(f32)), 0));
         try expect(all(round(splat(F32x4, -math.inf(f32))) == splat(F32x4, -math.inf(f32)), 0));
@@ -1008,7 +1008,7 @@ pub fn trunc(v: anytype) @TypeOf(v) {
         return select(mask, result, v);
     }
 }
-test "zmath.trunc" {
+test "kmath.trunc" {
     {
         try expect(all(trunc(splat(F32x4, math.inf(f32))) == splat(F32x4, math.inf(f32)), 0));
         try expect(all(trunc(splat(F32x4, -math.inf(f32))) == splat(F32x4, -math.inf(f32)), 0));
@@ -1100,7 +1100,7 @@ pub fn floor(v: anytype) @TypeOf(v) {
         return select(mask, result, v);
     }
 }
-test "zmath.floor" {
+test "kmath.floor" {
     {
         try expect(all(floor(splat(F32x4, math.inf(f32))) == splat(F32x4, math.inf(f32)), 0));
         try expect(all(floor(splat(F32x4, -math.inf(f32))) == splat(F32x4, -math.inf(f32)), 0));
@@ -1192,7 +1192,7 @@ pub fn ceil(v: anytype) @TypeOf(v) {
         return select(mask, result, v);
     }
 }
-test "zmath.ceil" {
+test "kmath.ceil" {
     {
         try expect(all(ceil(splat(F32x4, math.inf(f32))) == splat(F32x4, math.inf(f32)), 0));
         try expect(all(ceil(splat(F32x4, -math.inf(f32))) == splat(F32x4, -math.inf(f32)), 0));
@@ -1248,7 +1248,7 @@ pub inline fn clamp(v: anytype, vmin: anytype, vmax: anytype) @TypeOf(v, vmin, v
     result = min(vmax, result);
     return result;
 }
-test "zmath.clamp" {
+test "kmath.clamp" {
     // Calling math.inf causes test to fail!
     if (builtin.target.os.tag == .macos and builtin.target.cpu.arch == .aarch64) return error.SkipZigTest;
     {
@@ -1278,7 +1278,7 @@ pub inline fn clampFast(v: anytype, vmin: anytype, vmax: anytype) @TypeOf(v, vmi
     result = minFast(vmax, result);
     return result;
 }
-test "zmath.clampFast" {
+test "kmath.clampFast" {
     {
         const v0 = f32x4(-1.0, 0.2, 1.1, -0.3);
         const v = clampFast(v0, splat(F32x4, -0.5), splat(F32x4, 0.5));
@@ -1292,7 +1292,7 @@ pub inline fn saturate(v: anytype) @TypeOf(v) {
     result = min(result, splat(T, 1.0));
     return result;
 }
-test "zmath.saturate" {
+test "kmath.saturate" {
     // Calling math.inf causes test to fail!
     if (builtin.target.os.tag == .macos and builtin.target.cpu.arch == .aarch64) return error.SkipZigTest;
     {
@@ -1323,7 +1323,7 @@ pub inline fn saturateFast(v: anytype) @TypeOf(v) {
     result = minFast(result, splat(T, 1.0));
     return result;
 }
-test "zmath.saturateFast" {
+test "kmath.saturateFast" {
     {
         const v0 = f32x4(-1.0, 0.2, 1.1, -0.3);
         const v = saturateFast(v0);
@@ -1375,7 +1375,7 @@ pub inline fn lerpInverse(v0: anytype, v1: anytype, t: anytype) @TypeOf(v0, v1) 
 pub inline fn lerpInverseV(v0: anytype, v1: anytype, t: anytype) @TypeOf(v0, v1, t) {
     return (t - v0) / (v1 - v0);
 }
-test "zmath.lerpInverse" {
+test "kmath.lerpInverse" {
     try expect(math.approxEqAbs(f32, lerpInverseV(10.0, 100.0, 10.0), 0, 0.0005));
     try expect(math.approxEqAbs(f32, lerpInverseV(10.0, 100.0, 100.0), 1, 0.0005));
     try expect(math.approxEqAbs(f32, lerpInverseV(10.0, 100.0, 55.0), 0.5, 0.05));
@@ -1393,7 +1393,7 @@ pub inline fn lerpVOverTime(v0: anytype, v1: anytype, rate: anytype, dt: anytype
     const t = std.math.exp2(-rate * dt);
     return lerpV(v0, v1, t);
 }
-test "zmath.lerpOverTime" {
+test "kmath.lerpOverTime" {
     try expect(math.approxEqAbs(f32, lerpVOverTime(0.0, 1.0, 1.0, 1.0), 0.5, 0.0005));
     try expect(math.approxEqAbs(f32, lerpVOverTime(0.5, 1.0, 1.0, 1.0), 0.75, 0.0005));
     try expectVecApproxEqAbs(lerpOverTime(f32x4(0, 0, 10, 10), f32x4(100, 200, 100, 100), 1.0, 1.0), f32x4(50, 100, 55, 55), 0.0005);
@@ -1414,7 +1414,7 @@ pub inline fn mapLinearV(v: anytype, min1: anytype, max1: anytype, min2: anytype
     const d = max1 - min1;
     return min2 + (v - min1) * (max2 - min2) / d;
 }
-test "zmath.mapLinear" {
+test "kmath.mapLinear" {
     try expect(math.approxEqAbs(f32, mapLinearV(0, 0, 1.2, 10, 100), 10, 0.0005));
     try expect(math.approxEqAbs(f32, mapLinearV(1.2, 0, 1.2, 10, 100), 100, 0.0005));
     try expect(math.approxEqAbs(f32, mapLinearV(0.6, 0, 1.2, 10, 100), 55, 0.0005));
@@ -1438,7 +1438,7 @@ pub inline fn mod(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
     // vdivps, vroundps, vmulps, vsubps
     return v0 - v1 * trunc(v0 / v1);
 }
-test "zmath.mod" {
+test "kmath.mod" {
     try expectVecApproxEqAbs(mod(splat(F32x4, 3.1), splat(F32x4, 1.7)), splat(F32x4, 1.4), 0.0005);
     try expectVecApproxEqAbs(mod(splat(F32x4, -3.0), splat(F32x4, 2.0)), splat(F32x4, -1.0), 0.0005);
     try expectVecApproxEqAbs(mod(splat(F32x4, -3.0), splat(F32x4, -2.0)), splat(F32x4, -1.0), 0.0005);
@@ -1460,7 +1460,7 @@ pub fn modAngle(v: anytype) @TypeOf(v) {
     return switch (T) {
         f32 => modAngle32(v),
         F32x4, F32x8, F32x16 => modAngle32xN(v),
-        else => @compileError("zmath.modAngle() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.modAngle() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1468,7 +1468,7 @@ pub inline fn modAngle32xN(v: anytype) @TypeOf(v) {
     const T = @TypeOf(v);
     return v - splat(T, math.tau) * round(v * splat(T, 1.0 / math.tau)); // 2 x vmulps, 2 x load, vroundps, vaddps
 }
-test "zmath.modAngle" {
+test "kmath.modAngle" {
     try expectVecApproxEqAbs(modAngle(splat(F32x4, math.tau)), splat(F32x4, 0.0), 0.0005);
     try expectVecApproxEqAbs(modAngle(splat(F32x4, 0.0)), splat(F32x4, 0.0), 0.0005);
     try expectVecApproxEqAbs(modAngle(splat(F32x4, math.pi)), splat(F32x4, math.pi), 0.0005);
@@ -1479,7 +1479,7 @@ test "zmath.modAngle" {
 
 pub inline fn mulAdd(v0: anytype, v1: anytype, v2: anytype) @TypeOf(v0, v1, v2) {
     const T = @TypeOf(v0, v1, v2);
-    if (@import("zmath_options").enable_cross_platform_determinism) {
+    if (@import("kmath_options").enable_cross_platform_determinism) {
         return v0 * v1 + v2; // Compiler will generate mul, add sequence (no fma even if the target supports it).
     } else {
         if (cpu_arch == .x86_64 and has_avx and has_fma) {
@@ -1511,7 +1511,7 @@ fn sin32xN(v: anytype) @TypeOf(v) {
     result = mulAdd(result, x2, splat(T, 1.0));
     return x * result;
 }
-test "zmath.sin" {
+test "kmath.sin" {
     const epsilon = 0.0001;
 
     try expectVecApproxEqAbs(sin(splat(F32x4, 0.5 * math.pi)), splat(F32x4, 1.0), epsilon);
@@ -1562,7 +1562,7 @@ fn cos32xN(v: anytype) @TypeOf(v) {
     result = mulAdd(result, x2, splat(T, 1.0));
     return sign * result;
 }
-test "zmath.cos" {
+test "kmath.cos" {
     const epsilon = 0.0001;
 
     try expectVecApproxEqAbs(cos(splat(F32x4, 0.5 * math.pi)), splat(F32x4, 0.0), epsilon);
@@ -1594,7 +1594,7 @@ pub fn sin(v: anytype) @TypeOf(v) {
     return switch (T) {
         f32 => sin32(v),
         F32x4, F32x8, F32x16 => sin32xN(v),
-        else => @compileError("zmath.sin() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.sin() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1603,7 +1603,7 @@ pub fn cos(v: anytype) @TypeOf(v) {
     return switch (T) {
         f32 => cos32(v),
         F32x4, F32x8, F32x16 => cos32xN(v),
-        else => @compileError("zmath.cos() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.cos() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1612,7 +1612,7 @@ pub fn sincos(v: anytype) [2]@TypeOf(v) {
     return switch (T) {
         f32 => sincos32(v),
         F32x4, F32x8, F32x16 => sincos32xN(v),
-        else => @compileError("zmath.sincos() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.sincos() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1621,7 +1621,7 @@ pub fn asin(v: anytype) @TypeOf(v) {
     return switch (T) {
         f32 => asin32(v),
         F32x4, F32x8, F32x16 => asin32xN(v),
-        else => @compileError("zmath.asin() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.asin() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1630,7 +1630,7 @@ pub fn acos(v: anytype) @TypeOf(v) {
     return switch (T) {
         f32 => acos32(v),
         F32x4, F32x8, F32x16 => acos32xN(v),
-        else => @compileError("zmath.acos() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.acos() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -1661,7 +1661,7 @@ fn sincos32xN(v: anytype) [2]@TypeOf(v) {
 
     return .{ sresult, cresult };
 }
-test "zmath.sincos32xN" {
+test "kmath.sincos32xN" {
     const epsilon = 0.0001;
 
     var f: f32 = -100.0;
@@ -1748,7 +1748,7 @@ pub fn atan(v: anytype) @TypeOf(v) {
     const result1 = sign * splat(T, 0.5 * math.pi) - result;
     return select(sign == splat(T, 0.0), result, result1);
 }
-test "zmath.atan" {
+test "kmath.atan" {
     const epsilon = 0.0001;
     {
         const v = f32x4(0.25, 0.5, 1.0, 1.25);
@@ -1817,7 +1817,7 @@ pub fn atan2(vy: anytype, vx: anytype) @TypeOf(vx, vy) {
 
     return select(result_valid, r2, result);
 }
-test "zmath.atan2" {
+test "kmath.atan2" {
     // From DirectXMath XMVectorATan2():
     //
     // Return the inverse tangent of Y / X in the range of -Pi to Pi with the following exceptions:
@@ -1916,7 +1916,7 @@ pub inline fn dot2(v0: Vec, v1: Vec) F32x4 {
     xmm0 = f32x4(xmm0[0] + xmm1[0], xmm0[1], xmm0[2], xmm0[3]); // | x0*x1 + y0*y1 | -- | -- | -- |
     return swizzle(xmm0, .x, .x, .x, .x);
 }
-test "zmath.dot2" {
+test "kmath.dot2" {
     const v0 = f32x4(-1.0, 2.0, 300.0, -2.0);
     const v1 = f32x4(4.0, 5.0, 600.0, 2.0);
     const v = dot2(v0, v1);
@@ -1927,7 +1927,7 @@ pub inline fn dot3(v0: Vec, v1: Vec) F32x4 {
     const dot = v0 * v1;
     return f32x4s(dot[0] + dot[1] + dot[2]);
 }
-test "zmath.dot3" {
+test "kmath.dot3" {
     const v0 = f32x4(-1.0, 2.0, 3.0, 1.0);
     const v1 = f32x4(4.0, 5.0, 6.0, 1.0);
     const v = dot3(v0, v1);
@@ -1942,7 +1942,7 @@ pub inline fn dot4(v0: Vec, v1: Vec) F32x4 {
     xmm0 = f32x4(xmm0[0] + xmm1[0], xmm0[1], xmm0[2], xmm0[2]); // addss
     return swizzle(xmm0, .x, .x, .x, .x);
 }
-test "zmath.dot4" {
+test "kmath.dot4" {
     const v0 = f32x4(-1.0, 2.0, 3.0, -2.0);
     const v1 = f32x4(4.0, 5.0, 6.0, 2.0);
     const v = dot4(v0, v1);
@@ -1958,7 +1958,7 @@ pub inline fn cross3(v0: Vec, v1: Vec) Vec {
     result = result - xmm0 * xmm1;
     return andInt(result, f32x4_mask3);
 }
-test "zmath.cross3" {
+test "kmath.cross3" {
     {
         const v0 = f32x4(1.0, 0.0, 0.0, 1.0);
         const v1 = f32x4(0.0, 1.0, 0.0, 1.0);
@@ -1998,7 +1998,7 @@ pub inline fn length3(v: Vec) F32x4 {
 pub inline fn length4(v: Vec) F32x4 {
     return sqrt(dot4(v, v));
 }
-test "zmath.length3" {
+test "kmath.length3" {
     {
         const v = length3(f32x4(1.0, -2.0, 3.0, 1000.0));
         try expectVecApproxEqAbs(v, splat(F32x4, math.sqrt(14.0)), 0.001);
@@ -2026,7 +2026,7 @@ pub inline fn normalize3(v: Vec) Vec {
 pub inline fn normalize4(v: Vec) Vec {
     return v * splat(F32x4, 1.0) / sqrt(dot4(v, v));
 }
-test "zmath.normalize3" {
+test "kmath.normalize3" {
     {
         const v0 = f32x4(1.0, -2.0, 3.0, 1000.0);
         const v = normalize3(v0);
@@ -2039,7 +2039,7 @@ test "zmath.normalize3" {
         try expect(any(isNan(normalize3(f32x4(0, 0, 0, 0))), 0));
     }
 }
-test "zmath.normalize4" {
+test "kmath.normalize4" {
     {
         const v0 = f32x4(1.0, -2.0, 3.0, 10.0);
         const v = normalize4(v0);
@@ -2063,7 +2063,7 @@ fn vecMulMat(v: Vec, m: Mat) Vec {
 fn matMulVec(m: Mat, v: Vec) Vec {
     return .{ dot4(m[0], v)[0], dot4(m[1], v)[0], dot4(m[2], v)[0], dot4(m[3], v)[0] };
 }
-test "zmath.vecMulMat" {
+test "kmath.vecMulMat" {
     const m = Mat{
         f32x4(1.0, 0.0, 0.0, 0.0),
         f32x4(0.0, 1.0, 0.0, 0.0),
@@ -2111,7 +2111,7 @@ fn mulRetType(comptime Ta: type, comptime Tb: type) type {
     } else if ((Ta == Vec and Tb == Mat) or (Ta == Mat and Tb == Vec)) {
         return Vec;
     }
-    @compileError("zmath.mul() not implemented for types: " ++ @typeName(Ta) ++ @typeName(Tb));
+    @compileError("kmath.mul() not implemented for types: " ++ @typeName(Ta) ++ @typeName(Tb));
 }
 
 pub fn mul(a: anytype, b: anytype) mulRetType(@TypeOf(a), @TypeOf(b)) {
@@ -2130,10 +2130,10 @@ pub fn mul(a: anytype, b: anytype) mulRetType(@TypeOf(a), @TypeOf(b)) {
     } else if (Ta == Mat and Tb == Vec) {
         return matMulVec(a, b);
     } else {
-        @compileError("zmath.mul() not implemented for types: " ++ @typeName(Ta) ++ ", " ++ @typeName(Tb));
+        @compileError("kmath.mul() not implemented for types: " ++ @typeName(Ta) ++ ", " ++ @typeName(Tb));
     }
 }
-test "zmath.mul" {
+test "kmath.mul" {
     {
         const m = Mat{
             f32x4(0.1, 0.2, 0.3, 0.4),
@@ -2161,7 +2161,7 @@ fn mulMat(m0: Mat, m1: Mat) Mat {
     }
     return result;
 }
-test "zmath.matrix.mul" {
+test "kmath.matrix.mul" {
     const a = Mat{
         f32x4(0.1, 0.2, 0.3, 0.4),
         f32x4(0.5, 0.6, 0.7, 0.8),
@@ -2193,7 +2193,7 @@ pub fn transpose(m: Mat) Mat {
         @shuffle(f32, temp3, temp4, [4]i32{ 1, 3, ~@as(i32, 1), ~@as(i32, 3) }),
     };
 }
-test "zmath.matrix.transpose" {
+test "kmath.matrix.transpose" {
     const m = Mat{
         f32x4(1.0, 2.0, 3.0, 4.0),
         f32x4(5.0, 6.0, 7.0, 8.0),
@@ -2281,7 +2281,7 @@ pub fn lookAtLh(eyepos: Vec, focuspos: Vec, updir: Vec) Mat {
 pub fn lookAtRh(eyepos: Vec, focuspos: Vec, updir: Vec) Mat {
     return lookToLh(eyepos, eyepos - focuspos, updir);
 }
-test "zmath.matrix.lookToLh" {
+test "kmath.matrix.lookToLh" {
     const m = lookToLh(f32x4(0.0, 0.0, -3.0, 1.0), f32x4(0.0, 0.0, 1.0, 0.0), f32x4(0.0, 1.0, 0.0, 0.0));
     try expectVecApproxEqAbs(m[0], f32x4(1.0, 0.0, 0.0, 0.0), 0.001);
     try expectVecApproxEqAbs(m[1], f32x4(0.0, 1.0, 0.0, 0.0), 0.001);
@@ -2507,7 +2507,7 @@ pub fn determinant(m: Mat) F32x4 {
     r = mulAdd(v2, p2, r);
     return dot4(s, r);
 }
-test "zmath.matrix.determinant" {
+test "kmath.matrix.determinant" {
     const m = Mat{
         f32x4(10.0, -9.0, -12.0, 1.0),
         f32x4(7.0, -12.0, 11.0, 1.0),
@@ -2522,7 +2522,7 @@ pub fn inverse(a: anytype) @TypeOf(a) {
     return switch (T) {
         Mat => inverseMat(a),
         Quat => inverseQuat(a),
-        else => @compileError("zmath.inverse() not implemented for " ++ @typeName(T)),
+        else => @compileError("kmath.inverse() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -2632,7 +2632,7 @@ pub fn inverseDet(m: Mat, out_det: ?*F32x4) Mat {
     mr[3] *= scale;
     return mr;
 }
-test "zmath.matrix.inverse" {
+test "kmath.matrix.inverse" {
     const m = Mat{
         f32x4(10.0, -9.0, -12.0, 1.0),
         f32x4(7.0, -12.0, 11.0, 1.0),
@@ -2693,7 +2693,7 @@ pub fn matFromAxisAngle(axis: Vec, angle: f32) Mat {
     const normal = normalize3(axis);
     return matFromNormAxisAngle(normal, angle);
 }
-test "zmath.matrix.matFromAxisAngle" {
+test "kmath.matrix.matFromAxisAngle" {
     {
         const m0 = matFromAxisAngle(f32x4(1.0, 0.0, 0.0, 0.0), math.pi * 0.25);
         const m1 = rotationX(math.pi * 0.25);
@@ -2763,7 +2763,7 @@ pub fn matFromQuat(quat: Quat) Mat {
     m[3] = f32x4(0.0, 0.0, 0.0, 1.0);
     return m;
 }
-test "zmath.matrix.matFromQuat" {
+test "kmath.matrix.matFromQuat" {
     {
         const m = matFromQuat(f32x4(0.0, 0.0, 0.0, 1.0));
         try expectVecApproxEqAbs(m[0], f32x4(1.0, 0.0, 0.0, 0.0), 0.0001);
@@ -2792,7 +2792,7 @@ pub inline fn loadMat(mem: []const f32) Mat {
         load(mem[12..16], F32x4, 0),
     };
 }
-test "zmath.loadMat" {
+test "kmath.loadMat" {
     const a = [18]f32{
         1.0,  2.0,  3.0,  4.0,
         5.0,  6.0,  7.0,  8.0,
@@ -2884,7 +2884,7 @@ pub fn qmul(q0: Quat, q1: Quat) Quat {
     q1y = mulAdd(q1z, f32x4(-1.0, 1.0, 1.0, -1.0), q1y);
     return result + q1y;
 }
-test "zmath.quaternion.mul" {
+test "kmath.quaternion.mul" {
     {
         const q0 = f32x4(2.0, 3.0, 4.0, 1.0);
         const q1 = f32x4(3.0, 2.0, 1.0, 4.0);
@@ -2900,7 +2900,7 @@ pub fn quatToAxisAngle(quat: Quat, axis: *Vec, angle: *f32) void {
     axis.* = quat;
     angle.* = 2.0 * acos(quat[3]);
 }
-test "zmath.quaternion.quatToAxisAngle" {
+test "kmath.quaternion.quatToAxisAngle" {
     {
         const q0 = quatFromNormAxisAngle(f32x4(1.0, 0.0, 0.0, 0.0), 0.25 * math.pi);
         var axis: Vec = f32x4(4.0, 3.0, 2.0, 1.0);
@@ -2955,7 +2955,7 @@ pub fn quatFromMat(m: Mat) Quat {
 
     return t2 / length4(t2);
 }
-test "zmath.quatFromMat" {
+test "kmath.quatFromMat" {
     {
         const q0 = quatFromAxisAngle(f32x4(1.0, 0.0, 0.0, 0.0), 0.25 * math.pi);
         const q1 = quatFromMat(rotationX(0.25 * math.pi));
@@ -2984,7 +2984,7 @@ pub fn quatFromAxisAngle(axis: Vec, angle: f32) Quat {
     const normal = normalize3(axis);
     return quatFromNormAxisAngle(normal, angle);
 }
-test "zmath.quaternion.quatFromNormAxisAngle" {
+test "kmath.quaternion.quatFromNormAxisAngle" {
     {
         const q0 = quatFromAxisAngle(f32x4(1.0, 0.0, 0.0, 0.0), 0.25 * math.pi);
         const q1 = quatFromAxisAngle(f32x4(0.0, 1.0, 0.0, 0.0), 0.125 * math.pi);
@@ -3020,7 +3020,7 @@ fn inverseQuat(quat: Quat) Quat {
     const conj = conjugate(quat);
     return select(l <= splat(F32x4, math.floatEps(f32)), splat(F32x4, 0.0), conj / l);
 }
-test "zmath.quaternion.inverseQuat" {
+test "kmath.quaternion.inverseQuat" {
     try expectVecApproxEqAbs(
         inverse(f32x4(2.0, 3.0, 4.0, 1.0)),
         f32x4(-1.0 / 15.0, -1.0 / 10.0, -2.0 / 15.0, 1.0 / 30.0),
@@ -3036,7 +3036,7 @@ pub fn rotate(q: Quat, v: Vec) Vec {
     const uv = cross3(axis, v);
     return v + ((uv * w) + cross3(axis, uv)) * splat(F32x4, 2.0);
 }
-test "zmath.quaternion.rotate" {
+test "kmath.quaternion.rotate" {
     const quat = quatFromRollPitchYaw(0.1 * math.pi, 0.2 * math.pi, 0.3 * math.pi);
     const mat = matFromQuat(quat);
     const forward = f32x4(0.0, 0.0, -1.0, 0.0);
@@ -3071,7 +3071,7 @@ pub fn slerpV(q0: Quat, q1: Quat, t: F32x4) Quat {
 
     return q0 * s0 + sign * q1 * s1;
 }
-test "zmath.quaternion.slerp" {
+test "kmath.quaternion.slerp" {
     const from = f32x4(0.0, 0.0, 0.0, 1.0);
     const to = f32x4(0.5, 0.5, -0.5, 0.5);
     const result = slerp(from, to, 0.5);
@@ -3108,7 +3108,7 @@ pub fn quatToRollPitchYaw(q: Quat) [3]f32 {
     return angles;
 }
 
-test "zmath.quaternion.quatToRollPitchYaw" {
+test "kmath.quaternion.quatToRollPitchYaw" {
     {
         const expected = f32x4(0.1 * math.pi, 0.2 * math.pi, 0.3 * math.pi, 0.0);
         const quat = quatFromRollPitchYaw(expected[0], expected[1], expected[2]);
@@ -3157,7 +3157,7 @@ pub fn quatFromRollPitchYawV(angles: Vec) Quat { // | pitch | yaw | roll | 0 |
     const q0 = p0 * y0 * r0;
     return mulAdd(q1, r1, q0);
 }
-test "zmath.quaternion.quatFromRollPitchYawV" {
+test "kmath.quaternion.quatFromRollPitchYawV" {
     {
         const m0 = quatToMat(quatFromRollPitchYawV(f32x4(0.25 * math.pi, 0.0, 0.0, 0.0)));
         const m1 = rotationX(0.25 * math.pi);
@@ -3240,7 +3240,7 @@ pub fn rgbToHsl(rgb: F32x4) F32x4 {
         return select(boolx4(true, false, true, true), lha, s);
     }
 }
-test "zmath.color.rgbToHsl" {
+test "kmath.color.rgbToHsl" {
     try expectVecApproxEqAbs(rgbToHsl(f32x4(0.2, 0.4, 0.8, 1.0)), f32x4(0.6111, 0.6, 0.5, 1.0), 0.0001);
     try expectVecApproxEqAbs(rgbToHsl(f32x4(1.0, 0.0, 0.0, 0.5)), f32x4(0.0, 1.0, 0.5, 0.5), 0.0001);
     try expectVecApproxEqAbs(rgbToHsl(f32x4(0.0, 1.0, 0.0, 0.25)), f32x4(0.3333, 1.0, 0.5, 0.25), 0.0001);
@@ -3296,7 +3296,7 @@ pub fn hslToRgb(hsl: F32x4) F32x4 {
         return select(boolx4(true, true, false, false), rg, ba);
     }
 }
-test "zmath.color.hslToRgb" {
+test "kmath.color.hslToRgb" {
     try expectVecApproxEqAbs(f32x4(0.2, 0.4, 0.8, 1.0), hslToRgb(f32x4(0.6111, 0.6, 0.5, 1.0)), 0.0001);
     try expectVecApproxEqAbs(f32x4(1.0, 0.0, 0.0, 0.5), hslToRgb(f32x4(0.0, 1.0, 0.5, 0.5)), 0.0001);
     try expectVecApproxEqAbs(f32x4(0.0, 1.0, 0.0, 0.25), hslToRgb(f32x4(0.3333, 1.0, 0.5, 0.25)), 0.0005);
@@ -3358,7 +3358,7 @@ pub fn rgbToHsv(rgb: F32x4) F32x4 {
         return select(boolx4(true, false, true, true), hva, s);
     }
 }
-test "zmath.color.rgbToHsv" {
+test "kmath.color.rgbToHsv" {
     try expectVecApproxEqAbs(rgbToHsv(f32x4(0.2, 0.4, 0.8, 1.0)), f32x4(0.6111, 0.75, 0.8, 1.0), 0.0001);
     try expectVecApproxEqAbs(rgbToHsv(f32x4(0.4, 0.2, 0.8, 1.0)), f32x4(0.7222, 0.75, 0.8, 1.0), 0.0001);
     try expectVecApproxEqAbs(rgbToHsv(f32x4(0.4, 0.8, 0.2, 1.0)), f32x4(0.2777, 0.75, 0.8, 1.0), 0.0001);
@@ -3412,7 +3412,7 @@ pub fn hsvToRgb(hsv: F32x4) F32x4 {
     };
     return select(boolx4(true, true, true, false), rgb, hsv);
 }
-test "zmath.color.hsvToRgb" {
+test "kmath.color.hsvToRgb" {
     const epsilon = 0.0005;
     try expectVecApproxEqAbs(f32x4(0.2, 0.4, 0.8, 1.0), hsvToRgb(f32x4(0.6111, 0.75, 0.8, 1.0)), epsilon);
     try expectVecApproxEqAbs(f32x4(0.4, 0.2, 0.8, 1.0), hsvToRgb(f32x4(0.7222, 0.75, 0.8, 1.0)), epsilon);
@@ -3463,7 +3463,7 @@ pub fn rgbToSrgb(rgb: F32x4) F32x4 {
     v = select(v < static.cutoff, v0, v1);
     return select(boolx4(true, true, true, false), v, rgb);
 }
-test "zmath.color.rgbToSrgb" {
+test "kmath.color.rgbToSrgb" {
     const epsilon = 0.001;
     try expectVecApproxEqAbs(rgbToSrgb(f32x4(0.2, 0.4, 0.8, 1.0)), f32x4(0.484, 0.665, 0.906, 1.0), epsilon);
 }
@@ -3488,7 +3488,7 @@ pub fn srgbToRgb(srgb: F32x4) F32x4 {
     v = select(v > static.cutoff, v1, v0);
     return select(boolx4(true, true, true, false), v, srgb);
 }
-test "zmath.color.srgbToRgb" {
+test "kmath.color.srgbToRgb" {
     const epsilon = 0.0007;
     try expectVecApproxEqAbs(f32x4(0.2, 0.4, 0.8, 1.0), srgbToRgb(f32x4(0.484, 0.665, 0.906, 1.0)), epsilon);
     try expectVecApproxEqAbs(
@@ -3508,7 +3508,7 @@ pub fn linePointDistance(linept0: Vec, linept1: Vec, pt: Vec) F32x4 {
     const scale = dot3(ptvec, linevec) / lengthSq3(linevec);
     return length3(ptvec - linevec * scale);
 }
-test "zmath.linePointDistance" {
+test "kmath.linePointDistance" {
     {
         const linept0 = f32x4(-1.0, -2.0, -3.0, 1.0);
         const linept1 = f32x4(1.0, 2.0, 3.0, 1.0);
@@ -3590,7 +3590,7 @@ fn sincos32(v: f32) [2]f32 {
 
     return .{ sinv, cosv };
 }
-test "zmath.sincos32" {
+test "kmath.sincos32" {
     const epsilon = 0.0001;
 
     try expect(math.isNan(sincos32(math.inf(f32))[0]));
@@ -3642,7 +3642,7 @@ fn asin32(v: f32) f32 {
 
     return if (v >= 0.0) 0.5 * math.pi - result else result - 0.5 * math.pi;
 }
-test "zmath.asin32" {
+test "kmath.asin32" {
     const epsilon = 0.0001;
 
     try expect(math.approxEqAbs(f32, asin(@as(f32, -1.1)), -0.5 * math.pi, epsilon));
@@ -3696,7 +3696,7 @@ fn acos32(v: f32) f32 {
 
     return if (v >= 0.0) result else math.pi - result;
 }
-test "zmath.acos32" {
+test "kmath.acos32" {
     const epsilon = 0.1;
 
     try expect(math.approxEqAbs(f32, acos(@as(f32, -1.1)), math.pi, epsilon));
@@ -3860,7 +3860,7 @@ fn fft4(re: []F32x4, im: []F32x4, count: u32) void {
         fftButterflyDit4_1(&re[index], &im[index]);
     }
 }
-test "zmath.fft4" {
+test "kmath.fft4" {
     const epsilon = 0.0001;
     var re = [_]F32x4{f32x4(1.0, 2.0, 3.0, 4.0)};
     var im = [_]F32x4{f32x4s(0.0)};
@@ -3914,7 +3914,7 @@ fn fft8(re: []F32x4, im: []F32x4, count: u32) void {
         }
     }
 }
-test "zmath.fft8" {
+test "kmath.fft8" {
     const epsilon = 0.0001;
     var re = [_]F32x4{ f32x4(1.0, 2.0, 3.0, 4.0), f32x4(5.0, 6.0, 7.0, 8.0) };
     var im = [_]F32x4{ f32x4s(0.0), f32x4s(0.0) };
@@ -3969,7 +3969,7 @@ fn fft16(re: []F32x4, im: []F32x4, count: u32) void {
         );
     }
 }
-test "zmath.fft16" {
+test "kmath.fft16" {
     const epsilon = 0.0001;
     var re = [_]F32x4{
         f32x4(1.0, 2.0, 3.0, 4.0),
@@ -4042,7 +4042,7 @@ fn fftN(re: []F32x4, im: []F32x4, unity_table: []const F32x4, length: u32, count
         fft4(re, im, count * 4);
     }
 }
-test "zmath.fftN" {
+test "kmath.fftN" {
     var unity_table: [128]F32x4 = undefined;
     const epsilon = 0.0001;
 
@@ -4365,7 +4365,7 @@ pub fn ifft(re: []F32x4, im: []const F32x4, unity_table: []const F32x4) void {
 
     fftUnswizzle(re_temp, re);
 }
-test "zmath.ifft" {
+test "kmath.ifft" {
     var unity_table: [512]F32x4 = undefined;
     const epsilon = 0.0001;
 
@@ -4487,7 +4487,7 @@ fn floatToIntAndBack(v: anytype) @TypeOf(v) {
 
     return vf32;
 }
-test "zmath.floatToIntAndBack" {
+test "kmath.floatToIntAndBack" {
     {
         const v = floatToIntAndBack(f32x4(1.1, 2.9, 3.0, -4.5));
         try expectVecEqual(v, f32x4(1.0, 2.0, 3.0, -4.0));

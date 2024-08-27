@@ -25,38 +25,38 @@ pub fn build(b: *std.Build) void {
 
     const options_module = options_step.createModule();
 
-    const zmath = b.addModule("root", .{
+    const kmath = b.addModule("root", .{
         .root_source_file = b.path("src/main.zig"),
         .imports = &.{
-            .{ .name = "zmath_options", .module = options_module },
+            .{ .name = "kmath_options", .module = options_module },
         },
     });
 
-    const test_step = b.step("test", "Run zmath tests");
+    const test_step = b.step("test", "Run kmath tests");
 
     const tests = b.addTest(.{
-        .name = "zmath-tests",
+        .name = "kmath-tests",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = options.optimize,
     });
     b.installArtifact(tests);
 
-    tests.root_module.addImport("zmath_options", options_module);
+    tests.root_module.addImport("kmath_options", options_module);
 
     test_step.dependOn(&b.addRunArtifact(tests).step);
 
-    const benchmark_step = b.step("benchmark", "Run zmath benchmarks");
+    const benchmark_step = b.step("benchmark", "Run kmath benchmarks");
 
     const benchmarks = b.addExecutable(.{
-        .name = "zmath-benchmarks",
+        .name = "kmath-benchmarks",
         .root_source_file = b.path("src/benchmark.zig"),
         .target = target,
         .optimize = options.optimize,
     });
     b.installArtifact(benchmarks);
 
-    benchmarks.root_module.addImport("zmath", zmath);
+    benchmarks.root_module.addImport("kmath", kmath);
 
     benchmark_step.dependOn(&b.addRunArtifact(benchmarks).step);
 }

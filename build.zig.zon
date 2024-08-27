@@ -1,5 +1,5 @@
 .{
-    .name = "zmath",
+    .name = "kmath",
     .version = "0.10.0",
     .paths = .{
         "build.zig",

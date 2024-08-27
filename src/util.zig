@@ -1,7 +1,7 @@
 // ==============================================================================
 //
-// Collection of useful functions building on top of, and extending, core zmath.
-// https://github.com/michal-z/zig-gamedev/tree/main/libs/zmath
+// Collection of useful functions building on top of, and extending, core kmath.
+// https://github.com/michal-z/zig-gamedev/tree/main/libs/kmath
 //
 // ------------------------------------------------------------------------------
 // 1. Matrix functions
@@ -19,7 +19,7 @@
 //
 // ==============================================================================
 
-const zm = @import("zmath.zig");
+const zm = @import("kmath.zig");
 const std = @import("std");
 const math = std.math;
 const expect = std.testing.expect;
@@ -75,7 +75,7 @@ pub fn getAxisZ(m: zm.Mat) zm.Vec {
     return zm.normalize3(zm.f32x4(m[2][0], m[2][1], m[2][2], 0.0));
 }
 
-test "zmath.util.mat.translation" {
+test "kmath.util.mat.translation" {
     // zig fmt: off
     const mat_data = [18]f32{
         1.0,
@@ -91,13 +91,13 @@ test "zmath.util.mat.translation" {
     try zm.expectVecApproxEqAbs(translation, zm.f32x4(14.0, 15.0, 16.0, 0.0), 0.0001);
 }
 
-test "zmath.util.mat.scale" {
+test "kmath.util.mat.scale" {
     const mat = zm.mul(zm.scaling(3, 4, 5), zm.translation(6, 7, 8));
     const scale = getScaleVec(mat);
     try zm.expectVecApproxEqAbs(scale, zm.f32x4(3.0, 4.0, 5.0, 0.0), 0.0001);
 }
 
-test "zmath.util.mat.rotation" {
+test "kmath.util.mat.rotation" {
     const rotate_origin = zm.matFromRollPitchYaw(0.1, 1.2, 2.3);
     const mat = zm.mul(zm.mul(rotate_origin, zm.scaling(3, 4, 5)), zm.translation(6, 7, 8));
     const rotate_get = getRotationQuat(mat);
@@ -106,7 +106,7 @@ test "zmath.util.mat.rotation" {
     try zm.expectVecApproxEqAbs(v0, v1, 0.0001);
 }
 
-test "zmath.util.mat.z_vec" {
+test "kmath.util.mat.z_vec" {
     const degToRad = std.math.degreesToRadians;
     var identity = zm.identity();
     var z_vec = getAxisZ(identity);
@@ -117,7 +117,7 @@ test "zmath.util.mat.z_vec" {
     try zm.expectVecApproxEqAbs(z_vec, zm.f32x4(1.0, 0.0, 0.0, 0), 0.0001);
 }
 
-test "zmath.util.mat.y_vec" {
+test "kmath.util.mat.y_vec" {
     const degToRad = std.math.degreesToRadians;
     var identity = zm.identity();
     var y_vec = getAxisY(identity);
@@ -132,7 +132,7 @@ test "zmath.util.mat.y_vec" {
     try zm.expectVecApproxEqAbs(y_vec, zm.f32x4(0.0, 0.0, 1.0, 0), 0.01);
 }
 
-test "zmath.util.mat.right" {
+test "kmath.util.mat.right" {
     const degToRad = std.math.degreesToRadians;
     var identity = zm.identity();
     var right = getAxisX(identity);

@@ -1,43 +1,43 @@
 // -------------------------------------------------------------------------------------------------
-// zmath - benchmarks
+// kmath - benchmarks
 // -------------------------------------------------------------------------------------------------
 // 'zig build benchmark -Doptimize=ReleaseFast' will build and benchmakrs with all optimisations.
 //
 // -------------------------------------------------------------------------------------------------
 // 'AMD Ryzen 9 3950X 16-Core Processor', Windows 11, Zig 0.10.0-dev.2620+0e9458a3f, ReleaseFast
 // -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.5880s, zmath version: 1.0642s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.9318s, zmath version: 0.6888s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.2258s, zmath version: 1.1095s
-//            quaternion mul benchmark (AOS) - scalar version: 1.4123s, zmath version: 0.6958s
-//                      wave benchmark (SOA) - scalar version: 4.8165s, zmath version: 0.7338s
+//                matrix mul benchmark (AOS) - scalar version: 1.5880s, kmath version: 1.0642s
+//       cross3, scale, bias benchmark (AOS) - scalar version: 0.9318s, kmath version: 0.6888s
+// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.2258s, kmath version: 1.1095s
+//            quaternion mul benchmark (AOS) - scalar version: 1.4123s, kmath version: 0.6958s
+//                      wave benchmark (SOA) - scalar version: 4.8165s, kmath version: 0.7338s
 //
 // -------------------------------------------------------------------------------------------------
 // 'AMD Ryzen 7 5800X 8-Core Processer', Linux 5.17.14, Zig 0.10.0-dev.2624+d506275a0, ReleaseFast
 // -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.3672s, zmath version: 0.8617s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6586s, zmath version: 0.4803s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.0620s, zmath version: 0.8942s
-//            quaternion mul benchmark (AOS) - scalar version: 1.1324s, zmath version: 0.6064s
-//                      wave benchmark (SOA) - scalar version: 3.6598s, zmath version: 0.4231s
+//                matrix mul benchmark (AOS) - scalar version: 1.3672s, kmath version: 0.8617s
+//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6586s, kmath version: 0.4803s
+// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.0620s, kmath version: 0.8942s
+//            quaternion mul benchmark (AOS) - scalar version: 1.1324s, kmath version: 0.6064s
+//                      wave benchmark (SOA) - scalar version: 3.6598s, kmath version: 0.4231s
 //
 // -------------------------------------------------------------------------------------------------
 // 'Apple M1 Max', macOS Version 12.4, Zig 0.10.0-dev.2657+74442f350, ReleaseFast
 // -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.0297s, zmath version: 1.0538s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6294s, zmath version: 0.6532s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 0.9807s, zmath version: 1.0988s
-//            quaternion mul benchmark (AOS) - scalar version: 1.5413s, zmath version: 0.7800s
-//                      wave benchmark (SOA) - scalar version: 3.4220s, zmath version: 1.0255s
+//                matrix mul benchmark (AOS) - scalar version: 1.0297s, kmath version: 1.0538s
+//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6294s, kmath version: 0.6532s
+// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 0.9807s, kmath version: 1.0988s
+//            quaternion mul benchmark (AOS) - scalar version: 1.5413s, kmath version: 0.7800s
+//                      wave benchmark (SOA) - scalar version: 3.4220s, kmath version: 1.0255s
 //
 // -------------------------------------------------------------------------------------------------
 // '11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz', Windows 11, Zig 0.10.0-dev.2620+0e9458a3f, ReleaseFast
 // -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 2.2308s, zmath version: 0.9376s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 1.0821s, zmath version: 0.5110s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.6580s, zmath version: 0.9167s
-//            quaternion mul benchmark (AOS) - scalar version: 2.0139s, zmath version: 0.5856s
-//                      wave benchmark (SOA) - scalar version: 3.7832s, zmath version: 0.3642s
+//                matrix mul benchmark (AOS) - scalar version: 2.2308s, kmath version: 0.9376s
+//       cross3, scale, bias benchmark (AOS) - scalar version: 1.0821s, kmath version: 0.5110s
+// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.6580s, kmath version: 0.9167s
+//            quaternion mul benchmark (AOS) - scalar version: 2.0139s, kmath version: 0.5856s
+//                      wave benchmark (SOA) - scalar version: 3.7832s, kmath version: 0.3642s
 //
 // -------------------------------------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ pub fn main() !void {
 const std = @import("std");
 const time = std.time;
 const Timer = time.Timer;
-const zm = @import("zmath");
+const zm = @import("kmath");
 
 var prng = std.Random.DefaultPrng.init(0);
 const random = prng.random();
@@ -160,7 +160,7 @@ noinline fn mat4MulBenchmark(allocator: std.mem.Allocator, comptime count: compt
         const end = timer.read();
         const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
 
-        std.debug.print("zmath version: {d:.4}s\n", .{elapsed_s});
+        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
 }
 
@@ -230,7 +230,7 @@ noinline fn cross3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime coun
         const end = timer.read();
         const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
 
-        std.debug.print("zmath version: {d:.4}s\n", .{elapsed_s});
+        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
 }
 
@@ -301,7 +301,7 @@ noinline fn cross3Dot3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime 
         const end = timer.read();
         const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
 
-        std.debug.print("zmath version: {d:.4}s\n", .{elapsed_s});
+        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
 }
 
@@ -372,7 +372,7 @@ noinline fn quatBenchmark(allocator: std.mem.Allocator, comptime count: comptime
         const end = timer.read();
         const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
 
-        std.debug.print("zmath version: {d:.4}s\n", .{elapsed_s});
+        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
 }
 
@@ -464,6 +464,6 @@ noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime
         const end = timer.read();
         const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
 
-        std.debug.print("zmath version: {d:.4}s\n", .{elapsed_s});
+        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
 }
