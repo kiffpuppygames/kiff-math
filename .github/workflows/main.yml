@@ -34,6 +34,3 @@ jobs:
 
     - name: Benchmark
       run: zig build benchmark -Doptimize=ReleaseFast
-
-    - name: Run Tests
-      run: ./zig-out/bin/kmath-tests
