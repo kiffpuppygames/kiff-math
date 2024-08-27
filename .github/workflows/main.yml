@@ -32,5 +32,8 @@ jobs:
     - name: Build
       run: zig build test
 
+    - name: List Files in zig-out/bin
+      run: ls -la zig-out/bin
+
     - name: Run Tests
       run: ./zig-out/bin/kmath-tests
