@@ -1,5 +1,8 @@
 # kiff-math
-64 bit Linear Algebra Library based on zmath (https://github.com/zig-gamedev/zig-gamedev/tree/main/libs/kmath). I did this as zmath is embeded in zig-gamedev and us such creates alot bloat in you repos when all you want to use is the math lib. In addition zmath does not support 64bit. Which is the ultimate goal of this repo.
+
+NOTE: 64bit is not yet implemented! I will be making the 64bit branch available soon.
+
+64 bit Linear Algebra Library based on zmath (https://github.com/zig-gamedev/zig-gamedev/tree/main/libs/kmath). I did this as zmath is embeded in zig-gamedev and us such creates a lot bloat in your repos when all you want to use is the math lib and extra friction by having to copy and paste folders which can make keeping up with new versions a pain. In addition zmath does not support 64bit, which is the ultimate goal of this repo.
 
 # Goals
 - 64bit
@@ -22,7 +25,7 @@ An intro article can be found [here](https://zig.news/michalz/fast-multi-platfor
 
 ## Getting started
 
-Copy `kmath` into a subdirectory of your project and add the following to your `build.zig.zon` .dependencies:
+Add the following to your `build.zig.zon` .dependencies:
 ```
     // https://github.com/kiffpuppygames/kiff-math
     .kmath = .{ 
@@ -45,46 +48,46 @@ pub fn build(b: *std.Build) void {
 Now in your code you may import and use kmath:
 
 ```zig
-const zm = @import("kmath");
+const km = @import("kmath");
 
 pub fn main() !void {
     //
     // OpenGL/Vulkan example
     //
-    const object_to_world = zm.rotationY(..);
-    const world_to_view = zm.lookAtRh(
-        zm.f32x4(3.0, 3.0, 3.0, 1.0), // eye position
-        zm.f32x4(0.0, 0.0, 0.0, 1.0), // focus point
-        zm.f32x4(0.0, 1.0, 0.0, 0.0), // up direction ('w' coord is zero because this is a vector not a point)
+    const object_to_world = km.rotationY(..);
+    const world_to_view = km.lookAtRh(
+        km.f32x4(3.0, 3.0, 3.0, 1.0), // eye position
+        km.f32x4(0.0, 0.0, 0.0, 1.0), // focus point
+        km.f32x4(0.0, 1.0, 0.0, 0.0), // up direction ('w' coord is zero because this is a vector not a point)
     );
     // `perspectiveFovRhGl` produces Z values in [-1.0, 1.0] range (Vulkan app should use `perspectiveFovRh`)
-    const view_to_clip = zm.perspectiveFovRhGl(0.25 * math.pi, aspect_ratio, 0.1, 20.0);
+    const view_to_clip = km.perspectiveFovRhGl(0.25 * math.pi, aspect_ratio, 0.1, 20.0);
 
-    const object_to_view = zm.mul(object_to_world, world_to_view);
-    const object_to_clip = zm.mul(object_to_view, view_to_clip);
+    const object_to_view = km.mul(object_to_world, world_to_view);
+    const object_to_clip = km.mul(object_to_view, view_to_clip);
 
     // Transposition is needed because GLSL uses column-major matrices by default
-    gl.uniformMatrix4fv(0, 1, gl.TRUE, zm.arrNPtr(&object_to_clip));
+    gl.uniformMatrix4fv(0, 1, gl.TRUE, km.arrNPtr(&object_to_clip));
     
     // In GLSL: gl_Position = vec4(in_position, 1.0) * object_to_clip;
     
     //
     // DirectX example
     //
-    const object_to_world = zm.rotationY(..);
-    const world_to_view = zm.lookAtLh(
-        zm.f32x4(3.0, 3.0, -3.0, 1.0), // eye position
-        zm.f32x4(0.0, 0.0, 0.0, 1.0), // focus point
-        zm.f32x4(0.0, 1.0, 0.0, 0.0), // up direction ('w' coord is zero because this is a vector not a point)
+    const object_to_world = km.rotationY(..);
+    const world_to_view = km.lookAtLh(
+        km.f32x4(3.0, 3.0, -3.0, 1.0), // eye position
+        km.f32x4(0.0, 0.0, 0.0, 1.0), // focus point
+        km.f32x4(0.0, 1.0, 0.0, 0.0), // up direction ('w' coord is zero because this is a vector not a point)
     );
-    const view_to_clip = zm.perspectiveFovLh(0.25 * math.pi, aspect_ratio, 0.1, 20.0);
+    const view_to_clip = km.perspectiveFovLh(0.25 * math.pi, aspect_ratio, 0.1, 20.0);
 
-    const object_to_view = zm.mul(object_to_world, world_to_view);
-    const object_to_clip = zm.mul(object_to_view, view_to_clip);
+    const object_to_view = km.mul(object_to_world, world_to_view);
+    const object_to_clip = km.mul(object_to_view, view_to_clip);
     
     // Transposition is needed because HLSL uses column-major matrices by default
     const mem = allocateUploadMemory(...);
-    zm.storeMat(mem, zm.transpose(object_to_clip));
+    km.storeMat(mem, km.transpose(object_to_clip));
     
     // In HLSL: out_position_sv = mul(float4(in_position, 1.0), object_to_clip);
     
@@ -92,17 +95,17 @@ pub fn main() !void {
     // 'WASD' camera movement example
     //
     {
-        const speed = zm.f32x4s(10.0);
-        const delta_time = zm.f32x4s(demo.frame_stats.delta_time);
-        const transform = zm.mul(zm.rotationX(demo.camera.pitch), zm.rotationY(demo.camera.yaw));
-        var forward = zm.normalize3(zm.mul(zm.f32x4(0.0, 0.0, 1.0, 0.0), transform));
+        const speed = km.f32x4s(10.0);
+        const delta_time = km.f32x4s(demo.frame_stats.delta_time);
+        const transform = km.mul(km.rotationX(demo.camera.pitch), km.rotationY(demo.camera.yaw));
+        var forward = km.normalize3(km.mul(km.f32x4(0.0, 0.0, 1.0, 0.0), transform));
 
-        zm.storeArr3(&demo.camera.forward, forward);
+        km.storeArr3(&demo.camera.forward, forward);
 
-        const right = speed * delta_time * zm.normalize3(zm.cross3(zm.f32x4(0.0, 1.0, 0.0, 0.0), forward));
+        const right = speed * delta_time * km.normalize3(km.cross3(km.f32x4(0.0, 1.0, 0.0, 0.0), forward));
         forward = speed * delta_time * forward;
 
-        var cam_pos = zm.loadArr3(demo.camera.position);
+        var cam_pos = km.loadArr3(demo.camera.position);
 
         if (keyDown('W')) {
             cam_pos += forward;
@@ -115,7 +118,7 @@ pub fn main() !void {
             cam_pos -= right;
         }
 
-        zm.storeArr3(&demo.camera.position, cam_pos);
+        km.storeArr3(&demo.camera.position, cam_pos);
     }
    
     //
@@ -125,20 +128,20 @@ pub fn main() !void {
     var z_index: i32 = 0;
     while (z_index < grid_size) : (z_index += 1) {
         const z = scale * @intToFloat(f32, z_index - grid_size / 2);
-        const vz = zm.splat(T, z);
+        const vz = km.splat(T, z);
 
         var x_index: i32 = 0;
-        while (x_index < grid_size) : (x_index += zm.veclen(T)) {
+        while (x_index < grid_size) : (x_index += km.veclen(T)) {
             const x = scale * @intToFloat(f32, x_index - grid_size / 2);
-            const vx = zm.splat(T, x) + voffset * zm.splat(T, scale);
+            const vx = km.splat(T, x) + voffset * km.splat(T, scale);
 
-            const d = zm.sqrt(vx * vx + vz * vz);
-            const vy = zm.sin(d - vtime);
+            const d = km.sqrt(vx * vx + vz * vz);
+            const vy = km.sin(d - vtime);
 
             const index = @intCast(usize, x_index + z_index * grid_size);
-            zm.store(xslice[index..], vx, 0);
-            zm.store(yslice[index..], vy, 0);
-            zm.store(zslice[index..], vz, 0);
+            km.store(xslice[index..], vx, 0);
+            km.store(yslice[index..], vy, 0);
+            km.store(zslice[index..], vz, 0);
         }
     }
 }
