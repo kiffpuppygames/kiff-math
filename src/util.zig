@@ -1,7 +1,7 @@
 // ==============================================================================
 //
 // Collection of useful functions building on top of, and extending, core kmath.
-// https://github.com/michal-z/zig-gamedev/tree/main/libs/kmath
+// https://github.com/kiffpuppygames/kiff-math
 //
 // ------------------------------------------------------------------------------
 // 1. Matrix functions
@@ -19,35 +19,36 @@
 //
 // ==============================================================================
 
-const zm = @import("kmath.zig");
 const std = @import("std");
-const math = std.math;
-const expect = std.testing.expect;
 
-pub fn getTranslationVec(m: zm.Mat) zm.Vec {
+const vectors = @import("vectors.zig");
+
+const km = @import("kmath.zig");
+
+pub fn getTranslationVec(m: km.Mat) vectors.Vec {
     var translation = m[3];
     translation[3] = 0;
     return translation;
 }
 
-pub fn setTranslationVec(m: *zm.Mat, translation: zm.Vec) void {
+pub fn setTranslationVec(m: *km.Mat, translation: km.Vec) void {
     const w = m[3][3];
     m[3] = translation;
     m[3][3] = w;
 }
 
-pub fn getScaleVec(m: zm.Mat) zm.Vec {
-    const scale_x = zm.length3(zm.f32x4(m[0][0], m[1][0], m[2][0], 0))[0];
-    const scale_y = zm.length3(zm.f32x4(m[0][1], m[1][1], m[2][1], 0))[0];
-    const scale_z = zm.length3(zm.f32x4(m[0][2], m[1][2], m[2][2], 0))[0];
-    return zm.f32x4(scale_x, scale_y, scale_z, 0);
+pub fn getScaleVec(m: km.Mat) vectors.Vec {
+    const scale_x = km.length3(vectors.f32x4(m[0][0], m[1][0], m[2][0], 0))[0];
+    const scale_y = km.length3(vectors.f32x4(m[0][1], m[1][1], m[2][1], 0))[0];
+    const scale_z = km.length3(vectors.f32x4(m[0][2], m[1][2], m[2][2], 0))[0];
+    return vectors.f32x4(scale_x, scale_y, scale_z, 0);
 }
 
-pub fn getRotationQuat(_m: zm.Mat) zm.Quat {
+pub fn getRotationQuat(_m: km.Mat) km.Quat {
     // Ortho normalize given matrix.
-    const c1 = zm.normalize3(zm.f32x4(_m[0][0], _m[1][0], _m[2][0], 0));
-    const c2 = zm.normalize3(zm.f32x4(_m[0][1], _m[1][1], _m[2][1], 0));
-    const c3 = zm.normalize3(zm.f32x4(_m[0][2], _m[1][2], _m[2][2], 0));
+    const c1 = km.normalize3(vectors.f32x4(_m[0][0], _m[1][0], _m[2][0], 0));
+    const c2 = km.normalize3(vectors.f32x4(_m[0][1], _m[1][1], _m[2][1], 0));
+    const c3 = km.normalize3(vectors.f32x4(_m[0][2], _m[1][2], _m[2][2], 0));
     var m = _m;
     m[0][0] = c1[0];
     m[1][0] = c1[1];
@@ -60,19 +61,19 @@ pub fn getRotationQuat(_m: zm.Mat) zm.Quat {
     m[2][2] = c3[2];
 
     // Extract rotation
-    return zm.quatFromMat(m);
+    return km.quatFromMat(m);
 }
 
-pub fn getAxisX(m: zm.Mat) zm.Vec {
-    return zm.normalize3(zm.f32x4(m[0][0], m[0][1], m[0][2], 0.0));
+pub fn getAxisX(m: km.Mat) vectors.Vec {
+    return km.normalize3(vectors.f32x4(m[0][0], m[0][1], m[0][2], 0.0));
 }
 
-pub fn getAxisY(m: zm.Mat) zm.Vec {
-    return zm.normalize3(zm.f32x4(m[1][0], m[1][1], m[1][2], 0.0));
+pub fn getAxisY(m: km.Mat) vectors.Vec {
+    return km.normalize3(vectors.f32x4(m[1][0], m[1][1], m[1][2], 0.0));
 }
 
-pub fn getAxisZ(m: zm.Mat) zm.Vec {
-    return zm.normalize3(zm.f32x4(m[2][0], m[2][1], m[2][2], 0.0));
+pub fn getAxisZ(m: km.Mat) vectors.Vec {
+    return km.normalize3(vectors.f32x4(m[2][0], m[2][1], m[2][2], 0.0));
 }
 
 test "kmath.util.mat.translation" {
@@ -86,65 +87,9 @@ test "kmath.util.mat.translation" {
         18.0,
     };
     // zig fmt: on
-    const mat = zm.loadMat(mat_data[1..]);
+    const mat = km.loadMat(mat_data[1..]);
     const translation = getTranslationVec(mat);
-    try zm.expectVecApproxEqAbs(translation, zm.f32x4(14.0, 15.0, 16.0, 0.0), 0.0001);
-}
-
-test "kmath.util.mat.scale" {
-    const mat = zm.mul(zm.scaling(3, 4, 5), zm.translation(6, 7, 8));
-    const scale = getScaleVec(mat);
-    try zm.expectVecApproxEqAbs(scale, zm.f32x4(3.0, 4.0, 5.0, 0.0), 0.0001);
-}
-
-test "kmath.util.mat.rotation" {
-    const rotate_origin = zm.matFromRollPitchYaw(0.1, 1.2, 2.3);
-    const mat = zm.mul(zm.mul(rotate_origin, zm.scaling(3, 4, 5)), zm.translation(6, 7, 8));
-    const rotate_get = getRotationQuat(mat);
-    const v0 = zm.mul(zm.f32x4s(1), rotate_origin);
-    const v1 = zm.mul(zm.f32x4s(1), zm.quatToMat(rotate_get));
-    try zm.expectVecApproxEqAbs(v0, v1, 0.0001);
-}
-
-test "kmath.util.mat.z_vec" {
-    const degToRad = std.math.degreesToRadians;
-    var identity = zm.identity();
-    var z_vec = getAxisZ(identity);
-    try zm.expectVecApproxEqAbs(z_vec, zm.f32x4(0.0, 0.0, 1.0, 0), 0.0001);
-    const rot_yaw = zm.rotationY(degToRad(90));
-    identity = zm.mul(identity, rot_yaw);
-    z_vec = getAxisZ(identity);
-    try zm.expectVecApproxEqAbs(z_vec, zm.f32x4(1.0, 0.0, 0.0, 0), 0.0001);
-}
-
-test "kmath.util.mat.y_vec" {
-    const degToRad = std.math.degreesToRadians;
-    var identity = zm.identity();
-    var y_vec = getAxisY(identity);
-    try zm.expectVecApproxEqAbs(y_vec, zm.f32x4(0.0, 1.0, 0.0, 0), 0.01);
-    const rot_yaw = zm.rotationY(degToRad(90));
-    identity = zm.mul(identity, rot_yaw);
-    y_vec = getAxisY(identity);
-    try zm.expectVecApproxEqAbs(y_vec, zm.f32x4(0.0, 1.0, 0.0, 0), 0.01);
-    const rot_pitch = zm.rotationX(degToRad(90));
-    identity = zm.mul(identity, rot_pitch);
-    y_vec = getAxisY(identity);
-    try zm.expectVecApproxEqAbs(y_vec, zm.f32x4(0.0, 0.0, 1.0, 0), 0.01);
-}
-
-test "kmath.util.mat.right" {
-    const degToRad = std.math.degreesToRadians;
-    var identity = zm.identity();
-    var right = getAxisX(identity);
-    try zm.expectVecApproxEqAbs(right, zm.f32x4(1.0, 0.0, 0.0, 0), 0.01);
-    const rot_yaw = zm.rotationY(degToRad(90));
-    identity = zm.mul(identity, rot_yaw);
-    right = getAxisX(identity);
-    try zm.expectVecApproxEqAbs(right, zm.f32x4(0.0, 0.0, -1.0, 0), 0.01);
-    const rot_pitch = zm.rotationX(degToRad(90));
-    identity = zm.mul(identity, rot_pitch);
-    right = getAxisX(identity);
-    try zm.expectVecApproxEqAbs(right, zm.f32x4(0.0, 1.0, 0.0, 0), 0.01);
+    try km.expectVecApproxEqAbs(translation, vectors.f32x4(14.0, 15.0, 16.0, 0.0), 0.0001);
 }
 
 // ------------------------------------------------------------------------------

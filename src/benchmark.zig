@@ -40,6 +40,18 @@
 //                      wave benchmark (SOA) - scalar version: 3.7832s, kmath version: 0.3642s
 //
 // -------------------------------------------------------------------------------------------------
+// '12th Gen Intel(R) Core(TM) i9-12900H @ 3.40GHz', Windows 11, Zig 0.14.0-dev.1307+849c31a6c, ReleaseFast
+// -------------------------------------------------------------------------------------------------
+//                 matrix mul benchmark (AOS) - scalar version: 0.8894s, kmath version: 0.7972s
+//        cross3, scale, bias benchmark (AOS) - scalar version: 0.5211s, kmath version: 0.3864s
+//  cross3, dot3, scale, bias benchmark (AOS) - scalar version: 0.8575s, kmath version: 0.8168s
+//             quaternion mul benchmark (AOS) - scalar version: 0.7081s, kmath version: 0.5534s
+//                       wave benchmark (SOA) - scalar version: 3.4510s, kmath version: 0.4903s
+//
+// -------------------------------------------------------------------------------------------------
+
+const std = @import("std");
+const km = @import("kmath");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -61,11 +73,6 @@ pub fn main() !void {
     // d = sqrt(x * x + z * z); y = sin(d - t); SOA layout.
     try waveBenchmark(allocator, 1_000);
 }
-
-const std = @import("std");
-const time = std.time;
-const Timer = time.Timer;
-const zm = @import("kmath");
 
 var prng = std.Random.DefaultPrng.init(0);
 const random = prng.random();
@@ -100,9 +107,9 @@ noinline fn mat4MulBenchmark(allocator: std.mem.Allocator, comptime count: compt
     while (i < 100) : (i += 1) {
         for (data1.items) |b| {
             for (data0.items) |a| {
-                const ma = zm.loadMat(a[0..]);
-                const mb = zm.loadMat(b[0..]);
-                const r = zm.mul(ma, mb);
+                const ma = km.loadMat(a[0..]);
+                const mb = km.loadMat(b[0..]);
+                const r = km.mul(ma, mb);
                 std.mem.doNotOptimizeAway(&r);
             }
         }
@@ -110,7 +117,7 @@ noinline fn mat4MulBenchmark(allocator: std.mem.Allocator, comptime count: compt
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
@@ -138,27 +145,27 @@ noinline fn mat4MulBenchmark(allocator: std.mem.Allocator, comptime count: compt
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
     }
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
                 for (data0.items) |a| {
-                    const ma = zm.loadMat(a[0..]);
-                    const mb = zm.loadMat(b[0..]);
-                    const r = zm.mul(ma, mb);
+                    const ma = km.loadMat(a[0..]);
+                    const mb = km.loadMat(b[0..]);
+                    const r = km.mul(ma, mb);
                     std.mem.doNotOptimizeAway(&r);
                 }
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
@@ -183,9 +190,9 @@ noinline fn cross3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime coun
     while (i < 100) : (i += 1) {
         for (data1.items) |b| {
             for (data0.items) |a| {
-                const va = zm.loadArr3(a);
-                const vb = zm.loadArr3(b);
-                const cp = zm.f32x4s(0.01) * zm.cross3(va, vb) + zm.f32x4s(1.0);
+                const va = km.vectors.loadArr3(a);
+                const vb = km.vectors.loadArr3(b);
+                const cp = km.vectors.f32x4s(0.01) * km.cross3(va, vb) + km.vectors.f32x4s(1.0);
                 std.mem.doNotOptimizeAway(&cp);
             }
         }
@@ -193,7 +200,7 @@ noinline fn cross3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime coun
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
@@ -208,27 +215,27 @@ noinline fn cross3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime coun
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
     }
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
                 for (data0.items) |a| {
-                    const va = zm.loadArr3(a);
-                    const vb = zm.loadArr3(b);
-                    const cp = zm.f32x4s(0.01) * zm.cross3(va, vb) + zm.f32x4s(1.0);
+                    const va = km.vectors.loadArr3(a);
+                    const vb = km.vectors.loadArr3(b);
+                    const cp = km.vectors.f32x4s(0.01) * km.cross3(va, vb) + km.vectors.f32x4s(1.0);
                     std.mem.doNotOptimizeAway(&cp);
                 }
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
@@ -253,9 +260,9 @@ noinline fn cross3Dot3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime 
     while (i < 100) : (i += 1) {
         for (data1.items) |b| {
             for (data0.items) |a| {
-                const va = zm.loadArr3(a);
-                const vb = zm.loadArr3(b);
-                const r = (zm.dot3(va, vb) * (zm.f32x4s(0.1) * zm.cross3(va, vb) + zm.f32x4s(1.0)))[0];
+                const va = km.vectors.loadArr3(a);
+                const vb = km.vectors.loadArr3(b);
+                const r = (km.dot3(va, vb) * (km.vectors.f32x4s(0.1) * km.cross3(va, vb) + km.vectors.f32x4s(1.0)))[0];
                 std.mem.doNotOptimizeAway(&r);
             }
         }
@@ -263,7 +270,7 @@ noinline fn cross3Dot3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime 
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
@@ -279,27 +286,27 @@ noinline fn cross3Dot3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime 
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
     }
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
                 for (data0.items) |a| {
-                    const va = zm.loadArr3(a);
-                    const vb = zm.loadArr3(b);
-                    const r = zm.dot3(va, vb) * (zm.f32x4s(0.1) * zm.cross3(va, vb) + zm.f32x4s(1.0));
+                    const va = km.vectors.loadArr3(a);
+                    const vb = km.vectors.loadArr3(b);
+                    const r = km.dot3(va, vb) * (km.vectors.f32x4s(0.1) * km.cross3(va, vb) + km.vectors.f32x4s(1.0));
                     std.mem.doNotOptimizeAway(&r);
                 }
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
@@ -324,9 +331,9 @@ noinline fn quatBenchmark(allocator: std.mem.Allocator, comptime count: comptime
     while (i < 100) : (i += 1) {
         for (data1.items) |b| {
             for (data0.items) |a| {
-                const va = zm.loadArr4(a);
-                const vb = zm.loadArr4(b);
-                const r = zm.qmul(va, vb);
+                const va = km.vectors.loadArr4(a);
+                const vb = km.vectors.loadArr4(b);
+                const r = km.qmul(va, vb);
                 std.mem.doNotOptimizeAway(&r);
             }
         }
@@ -334,7 +341,7 @@ noinline fn quatBenchmark(allocator: std.mem.Allocator, comptime count: comptime
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
@@ -350,27 +357,27 @@ noinline fn quatBenchmark(allocator: std.mem.Allocator, comptime count: comptime
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
     }
 
     {
         i = 0;
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
         while (i < count) : (i += 1) {
             for (data1.items) |b| {
                 for (data0.items) |a| {
-                    const va = zm.loadArr4(a);
-                    const vb = zm.loadArr4(b);
-                    const r = zm.qmul(va, vb);
+                    const va = km.vectors.loadArr4(a);
+                    const vb = km.vectors.loadArr4(b);
+                    const r = km.qmul(va, vb);
                     std.mem.doNotOptimizeAway(&r);
                 }
             }
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }
@@ -386,7 +393,7 @@ noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime
 
         const scale: f32 = 0.05;
 
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
 
         var iter: usize = 0;
@@ -402,15 +409,15 @@ noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime
                     const x2 = scale * @as(f32, @floatFromInt(x_index + 2 - grid_size / 2));
                     const x3 = scale * @as(f32, @floatFromInt(x_index + 3 - grid_size / 2));
 
-                    const d0 = zm.sqrt(x0 * x0 + z * z);
-                    const d1 = zm.sqrt(x1 * x1 + z * z);
-                    const d2 = zm.sqrt(x2 * x2 + z * z);
-                    const d3 = zm.sqrt(x3 * x3 + z * z);
+                    const d0 = km.sqrt(x0 * x0 + z * z);
+                    const d1 = km.sqrt(x1 * x1 + z * z);
+                    const d2 = km.sqrt(x2 * x2 + z * z);
+                    const d3 = km.sqrt(x3 * x3 + z * z);
 
-                    const y0 = zm.sin(d0 - t);
-                    const y1 = zm.sin(d1 - t);
-                    const y2 = zm.sin(d2 - t);
-                    const y3 = zm.sin(d3 - t);
+                    const y0 = km.sin(d0 - t);
+                    const y1 = km.sin(d1 - t);
+                    const y2 = km.sin(d2 - t);
+                    const y3 = km.sin(d3 - t);
 
                     std.mem.doNotOptimizeAway(&y0);
                     std.mem.doNotOptimizeAway(&y1);
@@ -421,23 +428,23 @@ noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime
             t += 0.001;
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
     }
 
     {
-        const T = zm.F32x16;
+        const T = km.vectors.F32x16;
 
         const static = struct {
             const offsets = [16]f32{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         };
-        const voffset = zm.load(static.offsets[0..], T, 0);
-        var vt = zm.splat(T, 0.0);
+        const voffset = km.vectors.load(static.offsets[0..], T, 0);
+        var vt = km.vectors.splat(T, 0.0);
 
         const scale: f32 = 0.05;
 
-        var timer = try Timer.start();
+        var timer = try std.time.Timer.start();
         const start = timer.lap();
 
         var iter: usize = 0;
@@ -445,24 +452,24 @@ noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime
             var z_index: i32 = 0;
             while (z_index < grid_size) : (z_index += 1) {
                 const z = scale * @as(f32, @floatFromInt(z_index - grid_size / 2));
-                const vz = zm.splat(T, z);
+                const vz = km.vectors.splat(T, z);
 
                 var x_index: i32 = 0;
-                while (x_index < grid_size) : (x_index += zm.veclen(T)) {
+                while (x_index < grid_size) : (x_index += km.vectors.veclen(T)) {
                     const x = scale * @as(f32, @floatFromInt(x_index - grid_size / 2));
-                    const vx = zm.splat(T, x) + voffset * zm.splat(T, scale);
+                    const vx = km.vectors.splat(T, x) + voffset * km.vectors.splat(T, scale);
 
-                    const d = zm.sqrt(vx * vx + vz * vz);
+                    const d = km.sqrt(vx * vx + vz * vz);
 
-                    const vy = zm.sin(d - vt);
+                    const vy = km.sin(d - vt);
 
                     std.mem.doNotOptimizeAway(&vy);
                 }
             }
-            vt += zm.splat(T, 0.001);
+            vt += km.vectors.splat(T, 0.001);
         }
         const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / time.ns_per_s;
+        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
         std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
     }

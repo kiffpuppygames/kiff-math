@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
 
     const tests = b.addTest(.{
         .name = "kmath-tests",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/run_tests.zig"),
         .target = target,
         .optimize = options.optimize,
     });
