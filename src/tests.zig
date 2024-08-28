@@ -5,6 +5,12 @@ const vectors = @import("vectors.zig");
 const km = @import("kmath.zig");
 const util = @import("util.zig");
 
+const vector_tests = @import("vectors/vector_tests.zig");
+
+test {
+    _ = vector_tests;
+}
+
 test "kmath.load" {
     const a = [7]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 };
     var ptr = &a;
