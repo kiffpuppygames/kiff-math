@@ -1,3 +1,5 @@
+![CI](https://github.com/kiffpuppygames/kiff-math/actions/workflows/build.yml/badge.svg)
+
 # kiff-math
 
 NOTE: 64bit is not yet implemented! I will be making the 64bit branch available soon.
