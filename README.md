@@ -9,7 +9,7 @@ NOTE: 64bit is not yet implemented! I will be making the 64bit branch available 
 - Keep up with zig master
 - Stand alone and able to be used in any project without additional dependancies or bloated repos.
 
-# Based on kmath v0.10.0 - SIMD math library for game developers
+# Based on zmath v0.10.0 - SIMD math library for game developers
 
 Tested on x86_64 and AArch64.
 
