@@ -1,3 +1,4 @@
+const Build = @import("build.zig");
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
@@ -31,19 +32,16 @@ pub fn build(b: *std.Build) void {
             .{ .name = "kmath_options", .module = options_module },
         },
     });
-
-    const test_step = b.step("test", "Run kmath tests");
-
+    
     const tests = b.addTest(.{
         .name = "kmath-tests",
-        .root_source_file = b.path("src/run_tests.zig"),
+        .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = options.optimize,
     });
     b.installArtifact(tests);
-
     tests.root_module.addImport("kmath_options", options_module);
-
+    const test_step = b.step("test", "Run kmath tests");
     test_step.dependOn(&b.addRunArtifact(tests).step);
 
     const benchmark_step = b.step("benchmark", "Run kmath benchmarks");

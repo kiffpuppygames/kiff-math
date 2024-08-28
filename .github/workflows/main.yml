@@ -30,7 +30,7 @@ jobs:
         version: master
         
     - name: Build
-      run: zig build test
+      run: zig build test --summary all
 
     - name: Benchmark
       run: zig build benchmark -Doptimize=ReleaseFast
