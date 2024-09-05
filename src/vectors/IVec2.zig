@@ -52,3 +52,7 @@ pub inline fn to_array(self: *IVec2) [2]i32
 {
     return .{ self.values[0], self.values[1] };
 }
+
+pub fn len() usize {
+    return 2;
+}

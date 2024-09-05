@@ -62,3 +62,7 @@ pub fn to_array(self: *IVec4) [4]i64
 {
     return .{ self.values[0], self.values[1], self.values[2], self.values[3] };
 }
+
+pub fn len() usize {
+    return 4;
+}

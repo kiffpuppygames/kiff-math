@@ -1,6 +1,13 @@
 /// This file contains the definition of vectors and their operations. The vectors are defined as structs with a values field that is an array of the vector's components.
 /// The components are accessed using the x, y, z, and w fields of the vector struct. The vectors are defined for both floating-point and integer types.
 const std = @import("std");
+const builtin = @import("builtin");
+const bool_vectors = @import("bool_vectors.zig");
+
+const cpu_arch = builtin.cpu.arch;
+const has_avx = if (cpu_arch == .x86_64) std.Target.x86.featureSetHas(builtin.cpu.features, .avx) else false;
+const has_avx512f = if (cpu_arch == .x86_64) std.Target.x86.featureSetHas(builtin.cpu.features, .avx512f) else false;
+const has_fma = if (cpu_arch == .x86_64) std.Target.x86.featureSetHas(builtin.cpu.features, .fma) else false;
 
 // ------------------------------------------------------------------------------
 //
@@ -51,34 +58,39 @@ pub const AxisComponent = enum(u8) { X = 0, Y = 1, Z = 2, W = 3 };
 
 /// Creates a new vector of any suported type from a slice of values. If the length of the slice is 1, the vector will be initialized with the same value for all components. Otherwise, the vector will be initialized with
 /// the values in the slice.
-pub fn new(comptime T: type, comptime E: type, comptime size: usize, comptime e_count: usize, values: [e_count]E) T {
+pub fn new(comptime T: type, comptime Te: type, values: [T.len()]Te) T 
+{
     if (T != Vec2 and T != Vec3 and T != Vec4 and T != IVec2 and T != IVec3 and T != IVec4 and T != F32Vec2 and T != F32Vec3 and T != F32Vec4 and T != I32Vec2 and T != I32Vec3 and T != I32Vec4) {
         @compileError("new_vec: T must be a type vector");
     }
 
-    if (values.len != e_count) {
-        @compileError("new_vec: the number of element must be equal to the length of values");
-    }
-
-    if (size != values.len and values.len != 1) {
-        @compileError("new_vec: size must be equal to the length of values if values has more than one element");
-    }
-
-    if (values.len == 1) {
-        const slice: [size]E = .{values[0]} ** size;
-        const vals: @Vector(size, E) = slice;
-        return T{ .values = vals };
-    }
-
-    const slice: [size]E = values;
-    const vals: @Vector(size, E) = slice;
+    const slice: [T.len()]Te = values;
+    const vals: @Vector(T.len(), Te) = slice;
 
     return T{ .values = vals };
 }
 
-/// Retrieves the number of elements in a vector type.
-pub inline fn num_elements(comptime T: type) comptime_int {
-    return @typeInfo(T).Vector.len;
+pub fn splat(comptime T: type, comptime Te: type, val: Te) T
+{
+    if (T != Vec2 and T != Vec3 and T != Vec4 and T != IVec2 and T != IVec3 and T != IVec4 and T != F32Vec2 and T != F32Vec3 and T != F32Vec4 and T != I32Vec2 and T != I32Vec3 and T != I32Vec4) {
+        @compileError("splat: T must be a type vector");
+    }
+
+    return T { .values = @splat(val) };
+}
+
+pub fn splat_int(val: isize) @Vector(val, @TypeOf(val))
+{
+    return @splat(val);
+}
+
+pub fn splat_negative_zero(comptime T: type) T
+{
+    if (T != Vec2 and T != Vec3 and T != Vec4 and T != IVec2 and T != IVec3 and T != IVec4 and T != F32Vec2 and T != F32Vec3 and T != F32Vec4 and T != I32Vec2 and T != I32Vec3 and T != I32Vec4) {
+        @compileError("splat_negative_zero: T must be a type vector");
+    }
+
+    return T { .values = @splat(-0.0) };
 }
 
 /// Creates an array of values from a vector, based on the components specified in the component_mask. The component_mask is an array of AxisComponent values that specify which components of the vector to include in the array.
@@ -106,7 +118,7 @@ pub inline fn is_approximatly_equal(comptime T: type, a: T, b: T, epsilon: @type
 
     const E = @TypeOf(a.values, b.values, epsilon);
     const delta = a.values - b.values;
-    const temp = max_fast(delta, new(T, E, num_elements(T), .{0.0}).values - delta);
+    const temp = max_fast(delta, new(T, E, a.len(), .{0.0}).values - delta);
     return temp <= epsilon;
 }
 
@@ -126,4 +138,178 @@ inline fn vec_from_array(E: type, size: usize, values: []E) @Vector(usize, E) {
     }
 
     return values;
+}
+
+pub inline fn is_NAN(T: type, val: T) @Vector(T.len(), bool) {
+    return val.values != val.values;
+}
+
+pub inline fn abs(val: anytype) @TypeOf(val) {
+    .{ .values = @abs(val.values) };
+}
+
+pub inline fn is_inf(val: anytype) @Vector(val.len(), bool) {
+    const T = @TypeOf(val);
+    if (T != Vec2 and T != Vec3 and T != Vec4 and T != IVec2 and T != IVec3 and T != IVec4 and T != F32Vec2 and T != F32Vec3 and T != F32Vec4 and T != I32Vec2 and T != I32Vec3 and T != I32Vec4) {
+        @compileError("is_approximatly_equal: T must be a type vector");
+    }
+
+    return abs(val) == new(T, f64, 4, 1, .{std.math.inf(f64)});
+}
+
+pub fn all_true(vb: anytype) bool {
+    const T = @TypeOf(vb);
+    if (T != bool_vectors.BVec2 and T != bool_vectors.BVec3 and T != bool_vectors.BVec4) {
+        @compileError("all_true: T must be a type bool vector");
+    }
+    const ab: [T.len()]bool = vb;    
+    var result = true;
+    
+    for (0..T.len()) |i| {
+        result = result or ab[i];
+    }
+    return result;
+}
+
+pub fn any_true(vb: anytype) bool {
+    const T = @TypeOf(vb);
+    if (T != bool_vectors.BVec2 and T != bool_vectors.BVec3 and T != bool_vectors.BVec4) {
+        @compileError("all_true: T must be a type bool vector");
+    }
+    const ab: [T.len()]bool = vb.values;
+    var result = false;
+
+    for (0..T.len()) |i| {
+        result = result or ab[i];
+    }
+    return result;
+}
+
+pub inline fn is_in_bounds(v: anytype, bounds: anytype) @Vector(v.len(), bool) {
+    const T = @TypeOf(v, bounds);
+    if (T != Vec2 and T != Vec3 and T != Vec4 and T != IVec2 and T != IVec3 and T != IVec4 and T != F32Vec2 and T != F32Vec3 and T != F32Vec4 and T != I32Vec2 and T != I32Vec3 and T != I32Vec4) {
+        @compileError("is_in_bounds: T must be a type vector");
+    }
+
+    const Te = @typeInfo(T).values.Vector.elem_type;
+    const e_count = v.len();
+
+    const Tu = @Vector(e_count, u1);
+    const Tr = @Vector(e_count, bool);
+
+    // 2 x cmpleps, xorps, load, andps
+    const b0 = v <= bounds;
+    const b1 = (bounds.values * new(T, Te, e_count, 1, -1.0)).values <= v;
+    const b0u = @as(Tu, @bitCast(b0));
+    const b1u = @as(Tu, @bitCast(b1));
+    return @as(Tr, @bitCast(b0u & b1u));
+}
+
+pub inline fn and_int(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
+    const T = @TypeOf(v0, v1);
+    const Tu = @Vector(v0.len(), u32);
+    const v0u = @as(Tu, @bitCast(v0));
+    const v1u = @as(Tu, @bitCast(v1));
+    return @as(T, @bitCast(v0u & v1u)); // andps
+}
+
+pub inline fn and_not_int(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
+    const T = @TypeOf(v0, v1);
+    const Tu = @Vector(v0.len(), u32);
+    const v0u = @as(Tu, @bitCast(v0));
+    const v1u = @as(Tu, @bitCast(v1));
+    return @as(T, @bitCast(~v0u & v1u)); // andnps
+}
+
+pub inline fn or_int(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
+    const T = @TypeOf(v0, v1);
+    const Tu = @Vector(v0.len(), u32);
+    const v0u = @as(Tu, @bitCast(v0));
+    const v1u = @as(Tu, @bitCast(v1));
+    return @as(T, @bitCast(v0u | v1u)); // orps
+}
+
+pub inline fn nor_int(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
+    const T = @TypeOf(v0, v1);
+    const Tu = @Vector(v0.len(), u32);
+    const v0u = @as(Tu, @bitCast(v0));
+    const v1u = @as(Tu, @bitCast(v1));
+    return @as(T, @bitCast(~(v0u | v1u))); // por, pcmpeqd, pxor
+}
+
+pub inline fn xor_int(v0: anytype, v1: anytype) @TypeOf(v0, v1) {
+    const T = @TypeOf(v0, v1);
+    const Tu = @Vector(v0.len(), u32);
+    const v0u = @as(Tu, @bitCast(v0));
+    const v1u = @as(Tu, @bitCast(v1));
+    return @as(T, @bitCast(v0u ^ v1u)); // xorps
+}
+
+pub fn atan(v: anytype) @TypeOf(v) {
+    // 17-degree minimax approximation
+    const T = @TypeOf(v);
+
+    const vabs = abs(v);
+    const vinv = T.splat(1.0) / v;
+    var sign = select(v > T.splat(1.0), T.splat(1.0), splat_negative_zero(T));
+    const comp = vabs <= T.splat(1.0);
+    sign = select(comp, T.splat(0.0), sign);
+    const x = select(comp, v, vinv);
+    const x2 = x * x;
+
+    var result = mul_add(splat(T, 0.0028662257), x2, splat(T, -0.0161657367));
+    result = mul_add(result, x2, splat(T, 0.0429096138));
+    result = mul_add(result, x2, splat(T, -0.0752896400));
+    result = mul_add(result, x2, splat(T, 0.1065626393));
+    result = mul_add(result, x2, splat(T, -0.1420889944));
+    result = mul_add(result, x2, splat(T, 0.1999355085));
+    result = mul_add(result, x2, splat(T, -0.3333314528));
+    result = x * mul_add(result, x2, splat(T, 1.0));
+
+    const result1 = sign * splat(T, 0.5 * std.math.pi) - result;
+    return select(sign == splat(T, 0.0), result, result1);
+}
+
+pub fn atan2(vy: anytype, vx: anytype) @TypeOf(vx, vy) {
+    const T = @TypeOf(vx, vy);
+    const Tu = @Vector(T.len(), u32);
+
+    const vx_is_positive =
+        (@as(Tu, @bitCast(vx)) & @as(Tu, @splat(0x8000_0000))) == @as(Tu, @splat(0));
+
+    const vy_sign = and_int(vy, T.splat(-0.0));
+    const c0_25pi = or_int(vy_sign, @as(T, @splat(0.25 * std.math.pi)));
+    const c0_50pi = or_int(vy_sign, @as(T, @splat(0.50 * std.math.pi)));
+    const c0_75pi = or_int(vy_sign, @as(T, @splat(0.75 * std.math.pi)));
+    const c1_00pi = or_int(vy_sign, @as(T, @splat(1.00 * std.math.pi)));
+
+    var r1 = select(vx_is_positive, vy_sign, c1_00pi);
+    var r2 = select(vx == T.splat(0.0), c0_50pi, splat_int(T, 0xffff_ffff));
+    const r3 = select(vy == T.splat(0.0), r1, r2);
+    const r4 = select(vx_is_positive, c0_25pi, c0_75pi);
+    const r5 = select(is_inf(vx), r4, c0_50pi);
+    const result = select(is_inf(vy), r5, r3);
+    const result_valid = @as(Tu, @bitCast(result)) == @as(Tu, @splat(0xffff_ffff));
+
+    const v = vy / vx;
+    const r0 = atan(v);
+
+    r1 = select(vx_is_positive, splat_negative_zero(T), c1_00pi);
+    r2 = r0 + r1;
+
+    return select(result_valid, r2, result);
+}
+
+pub inline fn mul_add(v0: anytype, v1: anytype, v2: anytype) @TypeOf(v0, v1, v2) {
+    const T = @TypeOf(v0, v1, v2);
+    if (@import("kmath_options").enable_cross_platform_determinism) {
+        return v0 * v1 + v2; // Compiler will generate mul, add sequence (no fma even if the target supports it).
+    } else {
+        if (cpu_arch == .x86_64 and has_avx and has_fma) {
+            return @mulAdd(T, v0, v1, v2);
+        } else {
+            // NOTE(mziulek): On .x86_64 without HW fma instructions @mulAdd maps to really slow code!
+            return v0 * v1 + v2;
+        }
+    }
 }

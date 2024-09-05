@@ -57,3 +57,7 @@ pub fn to_array(self: *Vec3) [3]f64
 {
     return .{ self.values[0], self.values[1], self.values[2] };
 }
+
+pub fn len() usize {
+    return 3;
+}
