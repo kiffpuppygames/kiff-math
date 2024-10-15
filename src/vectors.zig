@@ -1,102 +1,90 @@
-const std = @import("std");
+const Vec3 = @import("Vec3.zig");
 
-pub const F32x4 = @Vector(4, f32);
-pub const F32x8 = @Vector(8, f32);
-pub const F32x16 = @Vector(16, f32);
+pub const VectorComponent = enum(usize) 
+{
+    W = 0,
+    X = 1,
+    Y = 2,
+    Z = 3,
+};
 
-pub const Boolx4 = @Vector(4, bool);
-pub const Boolx8 = @Vector(8, bool);
-pub const Boolx16 = @Vector(16, bool);
-
-pub const Vec = F32x4;
-
-pub const F32x4Component = enum { x, y, z, w };
-
-// ------------------------------------------------------------------------------
-//
-// 1. Initialization functions
-//
-// ------------------------------------------------------------------------------
-pub inline fn f32x4(e0: f32, e1: f32, e2: f32, e3: f32) F32x4 {
-    return .{ e0, e1, e2, e3 };
+pub inline fn vec(len: usize, element_type: anytype, vals: []element_type) @Vector(len, element_type) 
+{
+    return vals;
 }
 
-pub inline fn f32x8(e0: f32, e1: f32, e2: f32, e3: f32, e4: f32, e5: f32, e6: f32, e7: f32) F32x8 {
-    return .{ e0, e1, e2, e3, e4, e5, e6, e7 };
+pub inline fn x(self: anytype) f64
+{
+    return self.values[0];
 }
 
-pub inline fn f32x16(e0: f32, e1: f32, e2: f32, e3: f32, e4: f32, e5: f32, e6: f32, e7: f32, e8: f32, e9: f32, ea: f32, eb: f32, ec: f32, ed: f32, ee: f32, ef: f32) F32x16 {
-    return .{ e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec, ed, ee, ef };
+pub inline fn y(self: anytype) f64
+{
+    return self.values[1];
 }
 
-pub inline fn f32x4s(e0: f32) F32x4 {
-    return splat(F32x4, e0);
-}
-pub inline fn f32x8s(e0: f32) F32x8 {
-    return splat(F32x8, e0);
-}
-pub inline fn f32x16s(e0: f32) F32x16 {
-    return splat(F32x16, e0);
+pub inline fn z(self: anytype) f64
+{
+    return self.values[2];
 }
 
-pub inline fn boolx4(e0: bool, e1: bool, e2: bool, e3: bool) Boolx4 {
-    return .{ e0, e1, e2, e3 };
-}
-pub inline fn boolx8(e0: bool, e1: bool, e2: bool, e3: bool, e4: bool, e5: bool, e6: bool, e7: bool) Boolx8 {
-    return .{ e0, e1, e2, e3, e4, e5, e6, e7 };
+pub inline fn w(self: anytype) f64
+{
+    return self.values[3];
 }
 
-pub inline fn boolx16(e0: bool, e1: bool, e2: bool, e3: bool, e4: bool, e5: bool, e6: bool, e7: bool, e8: bool, e9: bool, ea: bool, eb: bool, ec: bool, ed: bool, ee: bool, ef: bool) Boolx16 {
-    return .{ e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec, ed, ee, ef };
+pub inline fn set_x(v: anytype, X: anytype) void
+{
+    v[0] = X;
 }
 
-pub inline fn splat(comptime T: type, value: f32) T {
-    return @splat(value);
+pub inline fn set_y(v: anytype, Y: anytype) void
+{
+    v[1] = Y;
 }
 
-pub inline fn splatInt(comptime T: type, value: u32) T {
-    return @splat(@bitCast(value));
+pub inline fn set_z(v: anytype, Z: anytype) void
+{
+    v[2] = Z;
 }
 
-pub inline fn loadArr2(arr: [2]f32) F32x4 {
-    return f32x4(arr[0], arr[1], 0.0, 0.0);
-}
-pub inline fn loadArr2zw(arr: [2]f32, z: f32, w: f32) F32x4 {
-    return f32x4(arr[0], arr[1], z, w);
-}
-pub inline fn loadArr3(arr: [3]f32) F32x4 {
-    return f32x4(arr[0], arr[1], arr[2], 0.0);
-}
-pub inline fn loadArr3w(arr: [3]f32, w: f32) F32x4 {
-    return f32x4(arr[0], arr[1], arr[2], w);
-}
-pub inline fn loadArr4(arr: [4]f32) F32x4 {
-    return f32x4(arr[0], arr[1], arr[2], arr[3]);
+pub inline fn set_w(v: anytype, W: anytype) void
+{
+   v[2] = W;
 }
 
-pub inline fn storeArr2(arr: *[2]f32, v: F32x4) void {
-    arr.* = .{ v[0], v[1] };
-}
-pub inline fn storeArr3(arr: *[3]f32, v: F32x4) void {
-    arr.* = .{ v[0], v[1], v[2] };
-}
-pub inline fn storeArr4(arr: *[4]f32, v: F32x4) void {
-    arr.* = .{ v[0], v[1], v[2], v[3] };
+pub inline fn mul(v1: anytype, v2: anytype) @TypeOf(v1, v2)
+{
+    return v1 * v2;
 }
 
-pub inline fn arr3Ptr(ptr: anytype) *const [3]f32 {
-    comptime std.debug.assert(@typeInfo(@TypeOf(ptr)) == .Pointer);
-    const T = std.meta.Child(@TypeOf(ptr));
-    comptime std.debug.assert(T == F32x4);
-    return @as(*const [3]f32, @ptrCast(ptr));
+pub inline fn mul_s(v1: anytype, s: anytype, len: anytype) @TypeOf(v1)
+{
+    const s_vec: @Vector(len, @TypeOf(s)) = @splat(s);
+    return v1.values * s_vec;
 }
 
-pub inline fn vecToArr2(v: Vec) [2]f32 {
-    return .{ v[0], v[1] };
+pub inline fn div(v1: anytype, v2: anytype) @TypeOf(v1, v2)
+{
+    return v1.values / v2.values;
 }
-pub inline fn vecToArr3(v: Vec) [3]f32 {
-    return .{ v[0], v[1], v[2] };
+
+pub inline fn add(v1: anytype, v2: anytype) @TypeOf(v1, v2)
+{
+    return v1.values + v2.values;
 }
-pub inline fn vecToArr4(v: Vec) [4]f32 {
-    return .{ v[0], v[1], v[2], v[3] };
+
+pub inline fn sub(v1: anytype, v2: anytype) @TypeOf(v1, v2)
+{
+    return v1.values - v2.values;
+}
+
+pub inline fn dot(v1: anytype, v2: anytype, Te: anytype) Te
+{
+    return @reduce(.Add, v1 * v2);
+}
+
+pub inline fn swizzle(element_type: anytype, v: anytype, comptime len: u32, mask: @Vector(len, usize)) @TypeOf(v)
+{
+    return @shuffle(element_type, v, undefined, mask);
 }
