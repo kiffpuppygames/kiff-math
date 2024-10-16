@@ -2,13 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Test",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/zig-out/bin/test",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Debug Tests",
+            "preLaunchTask": "Build and Run Tests",
             "stopAtEntry": false,
         },
         {
