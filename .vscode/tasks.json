@@ -44,7 +44,9 @@
             "command": "zig",
             "args": [
                 "build",
-                "test"            
+                "test",
+                "--summary",
+                "all"        
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
