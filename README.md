@@ -14,7 +14,7 @@ The library currently has base support for quaternions and 3d vectors.
   ## Github Action
   ### Quaternion Multiplication (Quat32) :
   KMath: 0.6208s
-  KMath: 0.9287s
+  ZMath: 0.9287s
 	
   ### Quaternion Multiplication (Quat (f64)):
   KMath: 0.6186s
