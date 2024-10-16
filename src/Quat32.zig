@@ -56,3 +56,13 @@ pub inline fn mul(self: *const Quat32, q: Quat32) Quat32
 {
     return Quat32 { .values = quaternions.mul(self.values, q.values, f32) };
 }
+
+pub fn mag(self: *const Quat32) f64
+{
+    return vectors.magnitude(self.values, f64);
+}
+
+pub fn normalize(self: *const Quat32) f64
+{
+    return vectors.normalize(self.values, f64);
+}

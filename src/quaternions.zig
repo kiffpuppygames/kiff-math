@@ -48,14 +48,6 @@ pub inline fn conjugate(q: anytype) @TypeOf(q)
     return .{ q[0], -q[1], -q[2], -q[3] };
 }
 
-/// |𝑞1| = srt(𝑤^2+𝑥^2+𝑦^2+𝑧^2)
-pub inline fn magnitude(q: anytype, Te: type) Te
-{
-    const sq = vectors.mul(q, q);
-    const sum = sq[0] + sq[1] + sq[2] + sq[3]; // @Reduce is slower here
-    return @sqrt(sum);
-}
-
 test "Quaternion Multiplication"
 {
     const q1 = @Vector(4, f64) {1, 0, 1, 0};
@@ -70,14 +62,4 @@ test "Quaternion Multiplication"
 
     const expected: @Vector(4, f64) = .{0.5, 1.25, 1.5, 0.25};
     try std.testing.expectEqual(prod, expected);
-}
-
-test "Quaternion Magnitude"
-{
-    const q = @Vector(4, f64) {1, 2, 3, 4};
-
-    const mag = magnitude(q, f64);
-
-    const expected: f64 = 5.477225575051661;
-    try std.testing.expectApproxEqAbs(expected, mag, std.math.floatEps(f64));
 }

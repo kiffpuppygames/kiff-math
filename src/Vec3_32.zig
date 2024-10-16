@@ -79,3 +79,14 @@ pub fn cross(self: *const Vec3_32, v: Vec3_32) Vec3_32
     return self_1.mul(v_1).sub(self_2.mul(v_2));
 }
 
+pub fn mag(self: *const Vec3_32) f64
+{
+    return vectors.magnitude(self.values, f64);
+}
+
+pub fn normalize(self: *const Vec3_32) f64
+{
+    return vectors.normalize(self.values, f64);
+}
+
+

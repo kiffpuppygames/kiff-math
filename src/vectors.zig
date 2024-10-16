@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const Vec3 = @import("Vec3.zig");
 
 pub const VectorComponent = enum(usize) 
@@ -61,7 +63,7 @@ pub inline fn mul(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 pub inline fn mul_s(v1: anytype, s: anytype, len: anytype) @TypeOf(v1)
 {
     const s_vec: @Vector(len, @TypeOf(s)) = @splat(s);
-    return v1.values * s_vec;
+    return v1 * s_vec;
 }
 
 pub inline fn div(v1: anytype, v2: anytype) @TypeOf(v1, v2)
@@ -87,4 +89,41 @@ pub inline fn dot(v1: anytype, v2: anytype, Te: anytype) Te
 pub inline fn swizzle(element_type: anytype, v: anytype, comptime len: u32, mask: @Vector(len, usize)) @TypeOf(v)
 {
     return @shuffle(element_type, v, undefined, mask);
+}
+
+/// |𝑞1| = srt(𝑤^2+𝑥^2+𝑦^2+𝑧^2)
+pub inline fn magnitude(q: anytype, Te: type) Te
+{
+    const sq = mul(q, q);
+    const sum = sq[0] + sq[1] + sq[2] + sq[3]; // @Reduce is slower here
+    return @sqrt(sum);
+}
+
+pub inline fn normalize(q: anytype, Te: type) @TypeOf(q)
+{
+    const mag = magnitude(q, Te);
+    const inv_len: f64 = 1 / mag;
+    return mul_s(q, inv_len, 4);
+}
+
+test "Magnitude"
+{
+    const q = @Vector(4, f64) {1, 2, 3, 4};
+
+    const mag = magnitude(q, f64);
+
+    const expected: f64 = 5.477225575051661;
+    try std.testing.expectApproxEqAbs(expected, mag, std.math.floatEps(f64));
+}
+
+test "Normalize"
+{
+    const q = @Vector(4, f64) {1, 2, 3, 4};
+
+    const normalized = normalize(q, f64);
+    
+    try std.testing.expectApproxEqAbs(0.18257418583505536, normalized[0], std.math.floatEps(f64));
+    try std.testing.expectApproxEqAbs(0.3651483716701107, normalized[1], std.math.floatEps(f64));
+    try std.testing.expectApproxEqAbs(0.5477225575051661, normalized[2], std.math.floatEps(f64));
+    try std.testing.expectApproxEqAbs(0.7302967433402214, normalized[3], std.math.floatEps(f64));
 }

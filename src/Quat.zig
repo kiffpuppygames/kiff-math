@@ -59,6 +59,11 @@ pub fn mul(self: *const Quat, q: Quat) Quat
 
 pub fn mag(self: *const Quat) f64
 {
-    return quaternions.magnitude(self.values, f64);
+    return vectors.magnitude(self.values, f64);
+}
+
+pub fn normalize(self: *const Quat) Quat
+{
+    return Quat { .values = vectors.normalize(self.values, f64) };
 }
 
