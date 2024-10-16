@@ -9,7 +9,7 @@ I want a linear algebra library that runs on zig latest and can be easily used o
 # Status
 The library currently has base support for quaternions and 3d vectors.
 
-# Benchmarks
+# Benchmarks (ZMath Comparison)
 
 Average value over 3 Runs of 1,000,000,000 iterations each, results may vary based on specs
 
@@ -17,12 +17,16 @@ Average value over 3 Runs of 1,000,000,000 iterations each, results may vary bas
 #### Quaternion Multiplication (Quat32) :
 - KMath: 0.6208s
 - ZMath: 0.9287s  
-#### Quaternion Multiplication (Quat (f64)):
-- KMath: 0.6186s
 
 ### 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
 #### Quaternion Multiplication (Quat32)
-  - KMath: 0.3936s
-  - ZMath: 0.3919s  
-#### Quaternion Multiplication (Quat (f64)):
-  - KMath: 0.3942s
+  - KMath: 0.3928s
+  - ZMath: 0.5882s  
+
+# Benchmarks Overall
+
+## 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
+#### Quaternion Multiplication: 0.3895s
+#### Magnitude: 0.5869s
+#### Normalize: 0.3956s
+  
