@@ -1,7 +1,7 @@
 const std = @import("std");
 
-pub const Quat = @import("Quat.zig");
+pub const quaternions = @import("Quat.zig");
 
 comptime {
-    _ = Quat;
+    _ = quaternions;
 }
