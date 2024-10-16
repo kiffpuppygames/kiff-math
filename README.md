@@ -1,4 +1,4 @@
-![Build Status](https://github.com/kiffpuppygames/kiff-math/actions/workflows/main.yml/badge.svg?branch=dev&label=dev)
+![Build Status Dev](https://github.com/kiffpuppygames/kiff-math/actions/workflows/main.yml/badge.svg?branch=dev)
 
 # kiff-math
 
