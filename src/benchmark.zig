@@ -20,10 +20,6 @@ pub fn main() !void
         std.debug.print("\tRun {d}:\n", .{ i + 1 });
         try quat_mul_bench(kmath.Quat, 10_000_000_00);
     }
-
-    std.debug.print("Press Enter to continue...", .{});
-    var buf: [10]u8 = undefined;
-    _ = try std.io.getStdIn().reader().readUntilDelimiter(buf[0..], '\n');
 }
 
 fn quat_mul_bench(T: anytype, iterations: usize) !void
