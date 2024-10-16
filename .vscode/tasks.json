@@ -1,0 +1,78 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "zig",
+            "args": 
+            [
+                "build",
+                "-Doptimize=Debug",
+                "-freference-trace",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build"
+            },
+            "problemMatcher": [ "$zig" ]
+        },
+        {
+            "label": "Debug Tests",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "test",
+                "-femit-bin=zig-out/bin/test",
+                "--test-no-exec",
+                "src/test.zig"             
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [ "$zig" ]
+        },
+        {
+            "label": "Build and Run Tests",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "build",
+                "test"            
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [ "$zig" ]
+        },
+        {
+            "label": "Benchmark",
+            "type": "shell",
+            "command": "zig",
+            "args": [
+                "build",
+                "benchmark",
+                "-Doptimize=ReleaseFast",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [ "$zig" ],
+            "dependsOn": [ "Build and Run Tests" ],
+        }
+    ]
+}

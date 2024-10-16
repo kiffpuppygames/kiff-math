@@ -9,8 +9,3 @@ pub const Quat32 = @import("Quat32.zig");
 comptime {
     _ = Quat;
 }
-
-test "basic add functionality" 
-{
-    try std.testing.expect(3 + 7 == 10);
-}
