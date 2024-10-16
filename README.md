@@ -1,4 +1,4 @@
-![CI](https://github.com/kiffpuppygames/kiff-math/actions/workflows/main.yml/badge.svg)
+![Build Status](https://github.com/kiffpuppygames/kiff-math/actions/workflows/main.yml/badge.svg?branch=main&event=push&status=success)
 
 # kiff-math
 
