@@ -1,7 +1,7 @@
 /// Common Quaternion Operations:
 /// Operation       | Description                                               | Use Cases
 /// Multiplication  | Combines two rotations, results in a new quaternion       | Combining rotations, 3D transformations
-/// Conjugate       | Negates the imaginary part, used to find inverse          | Inverting rotations, quaternion division
+/// Conjugate       | Negates the imaginary part, used to find inverse          | Inverting rotations, quaternion division (Not implemented use inverse instead)
 /// Magnitude       | Magnitude of the quaternion                               | Normalization, measuring quaternion size, 
 /// Normalize       | Scales the quaternion to have unit length                 | Unit quaternions for pure rotations
 /// Inverse         | Reverses the rotation represented by a quaternion         | Undoing a rotation
@@ -43,9 +43,25 @@ pub inline fn mul(q1: anytype, q2: anytype, Te: type) @TypeOf(q2)
     };
 }
 
+/// The conjugate of the provided quaterninon
 pub inline fn conjugate(q: anytype) @TypeOf(q)
 {
+    @setFloatMode(.optimized);
     return .{ q[0], -q[1], -q[2], -q[3] };
+}
+
+/// This will normalize before getting the inverse. 
+pub inline fn inverse(q: anytype) @TypeOf(q)
+{
+    @setFloatMode(.optimized);
+    return conjugate(vectors.normalize(q));
+}
+
+/// This will not nomalize before getting the inverse. 
+pub inline fn inverse_normalized(q: anytype) @TypeOf(q)
+{
+    @setFloatMode(.optimized);
+    return conjugate(q);
 }
 
 test "Quaternion Multiplication"
@@ -62,4 +78,20 @@ test "Quaternion Multiplication"
 
     const expected: @Vector(4, f64) = .{0.5, 1.25, 1.5, 0.25};
     try std.testing.expectEqual(prod, expected);
+}
+
+test "Quaternion Inverse"
+{
+    const eps = comptime std.math.floatEps(f64);
+
+    const q = @Vector(4, f64) {1, 0.5, 0.5, 0.75};
+
+    const inv = inverse(q);
+
+    const expected: @Vector(4, f64) = .{ 0.6963106238227914, -0.34815531191139570, -0.34815531191139570, -0.52223296786709361 };
+
+    try std.testing.expectApproxEqAbs(expected[0], inv[0], eps);
+    try std.testing.expectApproxEqAbs(expected[1], inv[1], eps);
+    try std.testing.expectApproxEqAbs(expected[2], inv[2], eps);
+    try std.testing.expectApproxEqAbs(expected[3], inv[3], eps);
 }

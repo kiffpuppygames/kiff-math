@@ -27,7 +27,7 @@
                 "test",
                 "-femit-bin=zig-out/bin/test",
                 "--test-no-exec",
-                "src/test.zig"             
+                "src/root.zig"             
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

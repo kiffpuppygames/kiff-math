@@ -57,60 +57,94 @@ pub inline fn set_w(v: anytype, W: anytype) void
 
 pub inline fn mul(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 {
+    @setFloatMode(.optimized);
     return v1 * v2;
 }
 
-pub inline fn mul_s(v1: anytype, s: anytype, len: anytype) @TypeOf(v1)
+pub inline fn mul_s(v: anytype, s: anytype) @TypeOf(v)
 {
-    const s_vec: @Vector(len, @TypeOf(s)) = @splat(s);
-    return v1 * s_vec;
+    @setFloatMode(.optimized);
+    return v * @as(@Vector(@typeInfo(@TypeOf(v)).vector.len, @TypeOf(s)), @splat(s));
 }
 
 pub inline fn div(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 {
-    return v1.values / v2.values;
+    @setFloatMode(.optimized);
+    return v1 / v2;
+}
+
+pub inline fn div_s(v: anytype, s: anytype) @TypeOf(v)
+{
+    @setFloatMode(.optimized);
+    return v / @as(@Vector(@typeInfo(@TypeOf(v)).vector.len, @TypeOf(s)), @splat(s));
 }
 
 pub inline fn add(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 {
-    return v1.values + v2.values;
+    @setFloatMode(.optimized);
+    return v1 + v2;
 }
 
 pub inline fn sub(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 {
-    return v1.values - v2.values;
+    @setFloatMode(.optimized);
+    return v1 - v2;
 }
 
-pub inline fn dot(v1: anytype, v2: anytype, Te: anytype) Te
+pub inline fn dot(v1: anytype, v2: anytype) @typeInfo(v1).Vector.elem_type
 {
+    @setFloatMode(.optimized);
     return @reduce(.Add, v1 * v2);
 }
 
-pub inline fn swizzle(element_type: anytype, v: anytype, comptime len: u32, mask: @Vector(len, usize)) @TypeOf(v)
+pub inline fn swizzle(v: anytype, mask: @Vector(@typeInfo(v).Vector.len, usize)) @TypeOf(v)
 {
-    return @shuffle(element_type, v, undefined, mask);
+    @setFloatMode(.optimized);
+    return @shuffle(@typeInfo(v).Vector.elem_type, v, undefined, mask);
 }
 
 /// |𝑞1| = srt(𝑤^2+𝑥^2+𝑦^2+𝑧^2)
-pub inline fn magnitude(q: anytype, Te: type) Te
+pub inline fn magnitude(v: anytype) @typeInfo(@TypeOf(v)).vector.child
 {
-    const sq = mul(q, q);
-    const sum = sq[0] + sq[1] + sq[2] + sq[3]; // @Reduce is slower here
+    @setFloatMode(.optimized);
+    const sum = @reduce(.Add, mul(v, v));
     return @sqrt(sum);
 }
 
-pub inline fn normalize(q: anytype, Te: type) @TypeOf(q)
+/// This will normalize the vector (includes the magnitude calculation) will return the vector unchaged if the magnitude is already 1. 
+pub inline fn normalize(v: anytype) @TypeOf(v)
 {
-    const mag = magnitude(q, Te);
-    const inv_len: f64 = 1 / mag;
-    return mul_s(q, inv_len, 4);
+    @setFloatMode(.optimized);
+    const mag = magnitude(v);
+
+    if (!std.math.approxEqAbs(@typeInfo(@TypeOf(v)).vector.child, mag, 1, comptime std.math.floatEps(@typeInfo(@TypeOf(v)).vector.child)))
+    {
+        return normalize_with_magnitude(v, mag);
+    }
+
+    return v;
+}
+
+/// This will normalize the vector (includes the magnitude calculation) will not check if the vector is already a unit vector
+/// Will return the normalized vector and its magnitude
+pub inline fn normalize_nocheck(v: anytype) @typeInfo(@TypeOf(v)).vector.child
+{
+    @setFloatMode(.optimized);
+    return normalize_with_magnitude(v, magnitude(v));
+}
+
+//This will normalize the vector by an already know magnitude
+pub inline fn normalize_with_magnitude(q: anytype, mag: anytype) @TypeOf(q)
+{
+    @setFloatMode(.optimized);
+    return mul_s(q, 1 / mag);
 }
 
 test "Magnitude"
 {
     const q = @Vector(4, f64) {1, 2, 3, 4};
 
-    const mag = magnitude(q, f64);
+    const mag = magnitude(q);
 
     const expected: f64 = 5.477225575051661;
     try std.testing.expectApproxEqAbs(expected, mag, std.math.floatEps(f64));
@@ -120,7 +154,7 @@ test "Normalize"
 {
     const q = @Vector(4, f64) {1, 2, 3, 4};
 
-    const normalized = normalize(q, f64);
+    const normalized = normalize(q);
     
     try std.testing.expectApproxEqAbs(0.18257418583505536, normalized[0], std.math.floatEps(f64));
     try std.testing.expectApproxEqAbs(0.3651483716701107, normalized[1], std.math.floatEps(f64));

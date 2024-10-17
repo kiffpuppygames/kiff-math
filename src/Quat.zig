@@ -7,9 +7,9 @@ pub const Quat = @This();
 
 values: @Vector(4, f64),
 
-pub fn new(X: f64, Y: f64, Z: f64) Quat
+pub fn new(W: f64, X: f64, Y: f64, Z: f64) Quat
 {
-    return Quat { .values = vectors.vec(3, f64, .{ X, Y, Z }) };
+    return Quat { .values = vectors.vec(3, f64, .{W, X, Y, Z }) };
 }
 
 pub fn w(self: *const Quat) f64
@@ -59,11 +59,21 @@ pub fn mul(self: *const Quat, q: Quat) Quat
 
 pub fn mag(self: *const Quat) f64
 {
-    return vectors.magnitude(self.values, f64);
+    return vectors.magnitude(self.values);
 }
 
 pub fn normalize(self: *const Quat) Quat
 {
-    return Quat { .values = vectors.normalize(self.values, f64) };
+    return Quat { .values = vectors.normalize(self.values) };
+}
+
+pub fn inverse(self: *const Quat) Quat
+{
+    return Quat { .values = quaternions.inverse(self.values) };
+}
+
+pub fn inverse_normalized(self: *const Quat) Quat
+{
+    return quaternions.inverse_normalized(self.values);
 }
 

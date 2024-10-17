@@ -15,18 +15,23 @@ Average value over 3 Runs of 1,000,000,000 iterations each, results may vary bas
 
 ### Github Action:
 #### Quaternion Multiplication (Quat32) :
-- KMath: 0.6208s
-- ZMath: 0.9287s  
+  - KMath: 0.6208s
+  - ZMath: 0.9287s  
 
 ### 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
 #### Quaternion Multiplication (Quat32)
   - KMath: 0.3928s
   - ZMath: 0.5882s  
 
+#### Quaternion Inverse (Quat32)
+  - KMath: 0.3930s
+  - ZMath: 0.5901s
+
 # Benchmarks Overall
 
-## 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
+## 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB (64bit floats):
 #### Quaternion Multiplication: 0.3895s
+#### Quaternion Inverse: 0.3939s
 #### Magnitude: 0.5869s
 #### Normalize: 0.3956s
   
