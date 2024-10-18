@@ -14,14 +14,14 @@ The library currently has base support for quaternions and 3d vectors.
 
 #### Github Action:
 ##### Quaternions: 
-		Multiplication KMath (f64): 0.4654s
-		Multiplication ZMath (f32): 0.4645s
-		Inverse KMath (f64): 0.4689s
-		Inverse ZMath (f32): 0.4650s
+  - Multiplication KMath (f64): 0.4654s
+  - Multiplication ZMath (f32): 0.4645s
+  - Inverse KMath (f64): 0.4689s
+  - Inverse ZMath (f32): 0.4650s
 ##### Vectors: 
-		Multiply Scalar KMath (f64): 0.4694s
-		Magnitude KMath (f64): 0.4650s
-		Normalize KMath (f64): 0.4651s
+  - Multiply Scalar KMath (f64): 0.4694s
+  - Magnitude KMath (f64): 0.4650s
+  - Normalize KMath (f64): 0.4651s
 
 #### 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
 ##### Quaternions:
