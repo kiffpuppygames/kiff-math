@@ -9,7 +9,8 @@ I want a linear algebra library that runs on zig latest and can be easily used o
 # Status
 The library currently has base support for quaternions and 3d vectors.
 
-# Benchmarks: *(Average value over 5 Runs of 500,000,000 iterations each, results may vary based on specs.)*
+# Benchmarks: 
+*(Average value over 5 Runs of 500,000,000 iterations each, results may vary based on specs.)*
 
 #### Github Action:
 ##### Quaternions: 
