@@ -11,27 +11,23 @@ The library currently has base support for quaternions and 3d vectors.
 
 # Benchmarks (ZMath Comparison)
 
-Average value over 3 Runs of 1,000,000,000 iterations each, results may vary based on specs
+### Test Case 1: Average value over 6 Runs of 500,000,000 iterations each, results may vary based on specs
 
-### Github Action:
-#### Quaternion Multiplication (Quat32) :
+### Benchmakrs: *(Average value over 5 Runs of 500,000,000 iterations each, results may vary based on specs.)*
+
+#### Github Action:
+##### Quaternion Multiplication (Quat32) :
   - KMath: 0.6208s
   - ZMath: 0.9287s  
 
-### 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
-#### Quaternion Multiplication (Quat32)
-  - KMath: 0.3928s
-  - ZMath: 0.5882s  
+#### 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB:
+##### Quaternions:
+  - Multiplication KMath (f64): 0.2895s
+  - Multiplication ZMath (f32): 0.2886s
+  - Inverse KMath (f64): 0.2905s
+  - Inverse ZMath (f32): 0.2928s
 
-#### Quaternion Inverse (Quat32)
-  - KMath: 0.3930s
-  - ZMath: 0.5901s
-
-# Benchmarks Overall
-
-## 12th Gen Intel i9-1200KS 3400 (16 Cores, 24 Logical), 64GB (64bit floats):
-#### Quaternion Multiplication: 0.3895s
-#### Quaternion Inverse: 0.3939s
-#### Magnitude: 0.5869s
-#### Normalize: 0.3956s
-  
+##### Vectors:
+  - Multiply Scalar KMath (f64): 0.2877s
+  - Magnitude KMath (f64): 0.2840s
+  - Normalize KMath (f64): 0.2937s

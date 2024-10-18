@@ -6,7 +6,7 @@ values: @Vector(3, f64),
 
 pub fn new(X: f64, Y: f64, Z: f64) Vec3
 {
-    return Vec3 { .values = vectors.vec(3, f64, .{ X, Y, Z }) };
+    return Vec3 { .values = .{ X, Y, Z } };
 }
 
 pub fn x(self: *const Vec3) f64
@@ -56,7 +56,7 @@ pub fn mul(self: *const Vec3, v: Vec3) Vec3
 
 pub fn mull_s(self: *const Vec3, s: f64) Vec3
 {
-    return Vec3 { .values = vectors.mul_s(self, s, 3) };
+    return Vec3 { .values = vectors.mul_s(self.values, s) };
 }
 
 pub fn div(self: *const Vec3, v: Vec3) Vec3 
@@ -81,11 +81,11 @@ pub fn cross(self: *const Vec3, v: Vec3) Vec3
 
 pub fn mag(self: *const Vec3) f64
 {
-    return vectors.magnitude(self.values, f64);
+    return vectors.magnitude(self.values);
 }
 
-pub fn normalize(self: *const Vec3) f64
+pub fn normalize(self: *const Vec3) Vec3
 {
-    return vectors.normalize(self.values, f64);
+    return Vec3 { .values = vectors.normalize(self.values) };
 }
 

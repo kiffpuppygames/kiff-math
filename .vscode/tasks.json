@@ -64,7 +64,7 @@
             "args": [
                 "build",
                 "benchmark",
-                "-Doptimize=ReleaseFast",
+                "-Doptimize=ReleaseFast",                
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

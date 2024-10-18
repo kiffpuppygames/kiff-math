@@ -10,11 +10,6 @@ pub const VectorComponent = enum(usize)
     Z = 3,
 };
 
-pub inline fn vec(len: usize, element_type: anytype, vals: []element_type) @Vector(len, element_type) 
-{
-    return vals;
-}
-
 pub inline fn x(self: anytype) f64
 {
     return self.values[0];
@@ -64,7 +59,17 @@ pub inline fn mul(v1: anytype, v2: anytype) @TypeOf(v1, v2)
 pub inline fn mul_s(v: anytype, s: anytype) @TypeOf(v)
 {
     @setFloatMode(.optimized);
-    return v * @as(@Vector(@typeInfo(@TypeOf(v)).vector.len, @TypeOf(s)), @splat(s));
+    
+    const vec_type = comptime @TypeOf(v);   
+    const vec_info = comptime @typeInfo(vec_type);
+    var splat_vec: vec_type = comptime undefined; 
+    inline for(0..vec_info.vector.len) |i|
+    {
+        splat_vec[i] = s;
+        //return v * @as(vec_type, @splat(s));
+    }
+
+    return v * splat_vec;
 }
 
 pub inline fn div(v1: anytype, v2: anytype) @TypeOf(v1, v2)
@@ -115,9 +120,11 @@ pub inline fn magnitude(v: anytype) @typeInfo(@TypeOf(v)).vector.child
 pub inline fn normalize(v: anytype) @TypeOf(v)
 {
     @setFloatMode(.optimized);
+    const eps = comptime std.math.floatEps(@typeInfo(@TypeOf(v)).vector.child);
+    const element_type = comptime @typeInfo(@TypeOf(v)).vector.child;
+    
     const mag = magnitude(v);
-
-    if (!std.math.approxEqAbs(@typeInfo(@TypeOf(v)).vector.child, mag, 1, comptime std.math.floatEps(@typeInfo(@TypeOf(v)).vector.child)))
+    if (!std.math.approxEqAbs(element_type, mag, 1, eps))
     {
         return normalize_with_magnitude(v, mag);
     }
