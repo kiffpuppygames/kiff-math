@@ -3,13 +3,16 @@ const std = @import("std");
 const vectors = @import("vectors.zig");
 const quaternions = @import("quaternions.zig");
 
+pub const Vec3 = @import("Vec3.zig");
+
 pub const Quat = @This();
+
 
 values: @Vector(4, f64),
 
 pub fn new(W: f64, X: f64, Y: f64, Z: f64) Quat
 {
-    return Quat { .values = vectors.vec(3, f64, .{W, X, Y, Z }) };
+    return Quat { .values = .{ W, X, Y, Z} };
 }
 
 pub fn w(self: *const Quat) f64
@@ -54,7 +57,7 @@ pub fn set_z(self: *const Quat, Z: f64) void
 
 pub fn mul(self: *const Quat, q: Quat) Quat
 {
-    return Quat { .values = quaternions.mul(self.values, q.values, f64) };
+    return Quat { .values = quaternions.mul(self.values, q.values) };
 }
 
 pub fn mag(self: *const Quat) f64
@@ -75,5 +78,10 @@ pub fn inverse(self: *const Quat) Quat
 pub fn inverse_normalized(self: *const Quat) Quat
 {
     return quaternions.inverse_normalized(self.values);
+}
+
+pub fn apply_to_vector(self: *const Quat, vec: Vec3) Vec3
+{
+    return Vec3 { .values = quaternions.rotate_vec( vec.values, self.values, ) };
 }
 

@@ -20,6 +20,8 @@ pub fn main() !void
     try quat_inv_bench_kmath();
     try quat_inv_bench_zmath();
 
+    try quat_rotate_vec_bench();
+
     std.debug.print("\tVectors: \n", .{});
     try mul_s_bench_kmath();
     try mag_bench_kmath();
@@ -106,8 +108,7 @@ fn quat_inv_bench_kmath() !void
 }
 
 fn quat_inv_bench_zmath() !void
-{
-    
+{    
     std.debug.print("\t\tInverse ZMath (f32): ", .{});
     const q = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32) };
     
@@ -122,6 +123,34 @@ fn quat_inv_bench_zmath() !void
         for (0..ITERATIONS) |_|
         {
             const r = zmath.inverse(q);
+            std.mem.doNotOptimizeAway(&r);
+        }
+
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }  
+
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});    
+}
+
+fn quat_rotate_vec_bench() !void
+{
+    std.debug.print("\t\tRotate Vec (f64): ", .{});
+    const q = kmath.Quat.new(random.float(f64), random.float(f64), random.float(f64), random.float(f64));    
+    const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
+    
+    std.debug.print("Warming up... ", .{});
+    const sum_q = @reduce(.Add, q.values);
+    std.mem.doNotOptimizeAway(&sum_q);
+    const sum_v = @reduce(.Add, v.values);
+    std.mem.doNotOptimizeAway(&sum_v);
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {
+            const r = q.normalize().apply_to_vector(v);
             std.mem.doNotOptimizeAway(&r);
         }
 

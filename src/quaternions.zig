@@ -18,10 +18,11 @@ const quaternions = @import("quaternions.zig");
 
 /// Quaternion multiplication is non-commutative (i.e., 𝑞1⋅𝑞2≠𝑞2⋅𝑞1). This operation is essential for combining rotations, and it produces another quaternion that represents the composition of two rotations.
 /// Formula: 𝑞1⋅𝑞2=(𝑤1𝑤2−𝑥1𝑥2−𝑦1𝑦2−𝑧1𝑧2,𝑤1𝑥2+𝑥1𝑤2+𝑦1𝑧2−𝑧1𝑦2,𝑤1𝑦2+𝑦1𝑤2+𝑧1𝑥2−𝑥1𝑧2,𝑤1𝑧2+𝑧1𝑤2+𝑥1𝑦2−𝑦1𝑥2)
-pub inline fn mul(q1: anytype, q2: anytype, Te: type) @TypeOf(q2)
+pub inline fn mul(q1: anytype, q2: anytype) @TypeOf(q2)
 {
     @setFloatMode(.optimized);
     const T = comptime @TypeOf(q2);
+    const Te = comptime @typeInfo(T).vector.child;
 
     const w_prod = vectors.mul(q1, q2); 
     const x_prod = vectors.mul(
@@ -64,6 +65,18 @@ pub inline fn inverse_normalized(q: anytype) @TypeOf(q)
     return conjugate(q);
 }
 
+/// This funtion requiers that the quaternion be a unit/normalized quaternion
+pub inline fn rotate_vec(v: anytype, qr: anytype) @TypeOf(v)
+{    
+    @setFloatMode(.optimized);
+    
+    const Tqr = comptime @TypeOf(qr);
+
+    const qv = Tqr {0, v[0], v[1], v[2] };
+    const qvr = mul( mul(qr, qv), conjugate(qr));
+    return .{ qvr[1], qvr[2], qvr[3] };
+}
+
 test "Quaternion Multiplication"
 {
     const q1 = @Vector(4, f64) {1, 0, 1, 0};
@@ -74,7 +87,7 @@ test "Quaternion Multiplication"
     // 1-0.5-0-0
     // 0.5
 
-    const prod = mul(q1, q2, f64);
+    const prod = mul(q1, q2);
 
     const expected: @Vector(4, f64) = .{0.5, 1.25, 1.5, 0.25};
     try std.testing.expectEqual(prod, expected);
@@ -94,4 +107,18 @@ test "Quaternion Inverse"
     try std.testing.expectApproxEqAbs(expected[1], inv[1], eps);
     try std.testing.expectApproxEqAbs(expected[2], inv[2], eps);
     try std.testing.expectApproxEqAbs(expected[3], inv[3], eps);
+}
+
+test "Quaternion Rotate Vector"
+{
+    const eps = comptime std.math.floatEps(f64);
+    const q = @Vector(4, f64) {0.7071067811865476, 0, 0, 0.7071067811865476};
+    const v = @Vector(3, f64) { 1, 0, 0 };
+    const expected = @Vector(3, f64) { 0, 1, 0 };
+
+    const vr = rotate_vec(v, q);
+
+    try std.testing.expectApproxEqAbs(expected[0], vr[0], eps);
+    try std.testing.expectApproxEqAbs(expected[1], vr[1], eps);
+    try std.testing.expectApproxEqAbs(expected[2], vr[2], eps);
 }
