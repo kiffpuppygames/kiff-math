@@ -69,12 +69,96 @@ pub inline fn inverse_normalized(q: anytype) @TypeOf(q)
 pub inline fn rotate_vec(v: anytype, qr: anytype) @TypeOf(v)
 {    
     @setFloatMode(.optimized);
-    
+
     const Tqr = comptime @TypeOf(qr);
 
     const qv = Tqr {0, v[0], v[1], v[2] };
     const qvr = mul( mul(qr, qv), conjugate(qr));
     return .{ qvr[1], qvr[2], qvr[3] };
+}
+
+pub inline fn lerp(q1: anytype, q2: anytype, factor: f64) @TypeOf(q1, q2)
+{
+    var dot = vectors.dot(q1, q2);
+    var q2_shortest = q2;
+    
+    if (dot < 0)
+    {
+        dot = -dot;
+        q2_shortest = vectors.negate(q2);
+    }
+    
+    const q = @TypeOf(q1, q2) { q1[0] * (1.0 - factor) + q2_shortest[0] * factor, q1[1] * (1.0 - factor) + q2_shortest[1] * factor, q1[2] * (1.0 - factor) + q2_shortest[2] * factor, q1[3] * (1.0 - factor) + q2_shortest[3] * factor };
+    return vectors.normalize(q);    
+}
+
+pub inline fn slerp(q1: anytype, q2: anytype, factor: f64) @TypeOf(q1, q2)
+{
+    var dot = vectors.dot(q1, q2);
+    var q2_shortest = q2;
+    
+    if (dot < 0)
+    {
+        dot = -dot;
+        q2_shortest = vectors.negate(q2);
+    }
+
+    const epsilon = 1e-6;
+    if (dot > 1.0 - epsilon) 
+    {
+        // If quaternions are very close, use LERP
+        return lerp(q1, q2_shortest, factor);
+    }
+
+    const theta = std.math.acos(dot);
+    const sin_theta = @sin(theta);
+
+    const sin_theta_inv = 1.0 / sin_theta;
+    const factor1 = @sin((1.0 - factor) * theta) * sin_theta_inv;
+    const factor2 = @sin(factor * theta) * sin_theta_inv;
+
+    return .{ q1[0] * factor1 + q2_shortest[0] * factor2, q1[1] * factor1 + q2_shortest[1] * factor2, q1[2] * factor1 + q2_shortest[2] * factor2, q1[3] * factor1 + q2_shortest[3] * factor2 };
+}
+
+pub inline fn approx_equal(q1: anytype, q2: anytype) bool
+{
+    const eps = comptime std.math.floatEps(f64);
+    return @abs(q1[0] - q2[0]) < eps and  @abs(q1[1] - q2[1]) < eps and @abs(q1[2] - q2[2]) < eps and @abs(q1[3] - q2[3]) < eps;
+}
+
+test "Quaternion slerp" {
+    // Define two quaternions to interpolate between
+    const q1 = @Vector(4, f64) { 1.0, 0.0, 0.0, 0.0 }; // Identity quaternion
+    const q2 = @Vector(4, f64) { 0.7071067811865476, 0.0, 0.7071067811865475, 0.0 }; // 90-degree rotation about the Y-axis
+
+    // 1. Test t = 0 (should return q1)
+    const result_t0 = slerp(q1, q2, 0.0);
+    try test_quat_expect_approx_eq_abs(result_t0, q1);
+
+    // 2. Test t = 1 (should return q2)
+    const result_t1 = slerp(q1, q2, 1.0);
+    try test_quat_expect_approx_eq_abs(q2, result_t1);
+
+    // 3. Test t = 0.5 (should return halfway between q1 and q2)
+    const expected_halfway = @Vector(4, f64) { 0.9238795325112867, 0.0, 0.3826834323650898, 0.0 }; // 45-degree rotation
+    const result_t05 = slerp(q1, q2, 0.5);
+    try test_quat_expect_approx_eq_abs(result_t05, expected_halfway);
+
+    // 4. Check the result is normalized (unit quaternion) for t = 0.5
+    const normalized_result = vectors.normalize(result_t05);
+    const mag = vectors.magnitude(normalized_result);
+
+    const eps = comptime std.math.floatEps(f64);
+    try std.testing.expectApproxEqAbs(1.0, mag, eps);
+}
+
+fn test_quat_expect_approx_eq_abs(expected: anytype, actual: anytype) !void
+{
+    const eps = comptime std.math.floatEps(f64);
+    try std.testing.expectApproxEqAbs(expected[0], actual[0], eps);
+    try std.testing.expectApproxEqAbs(expected[1], actual[1], eps);
+    try std.testing.expectApproxEqAbs(expected[2], actual[2], eps);
+    try std.testing.expectApproxEqAbs(expected[3], actual[3], eps);
 }
 
 test "Quaternion Multiplication"
@@ -95,18 +179,13 @@ test "Quaternion Multiplication"
 
 test "Quaternion Inverse"
 {
-    const eps = comptime std.math.floatEps(f64);
-
     const q = @Vector(4, f64) {1, 0.5, 0.5, 0.75};
 
     const inv = inverse(q);
 
     const expected: @Vector(4, f64) = .{ 0.6963106238227914, -0.34815531191139570, -0.34815531191139570, -0.52223296786709361 };
 
-    try std.testing.expectApproxEqAbs(expected[0], inv[0], eps);
-    try std.testing.expectApproxEqAbs(expected[1], inv[1], eps);
-    try std.testing.expectApproxEqAbs(expected[2], inv[2], eps);
-    try std.testing.expectApproxEqAbs(expected[3], inv[3], eps);
+    try test_quat_expect_approx_eq_abs(expected, inv);
 }
 
 test "Quaternion Rotate Vector"

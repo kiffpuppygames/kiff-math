@@ -2,14 +2,18 @@ const std = @import("std");
 const kmath = @import("root.zig");
 const zmath = @import("zmath");
 
-var prng = std.Random.DefaultPrng.init(0);
-const random = prng.random();
+var prng: std.Random.Xoshiro256 = undefined;
+var random: std.Random = undefined;
 
 const ITERATIONS: usize = 500_000_000;
+const WARMUP_ITERATIONS: usize = 10_000;
 const RUNS: usize = 5;
 
 pub fn main() !void 
 {
+    prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    random = prng.random();
+
     std.debug.print("Running Benchmarks: (The average over {d} runs with {d} iterations each)\n", .{ RUNS, ITERATIONS });
 
     std.debug.print("\tQuaternions: \n", .{});
@@ -21,6 +25,8 @@ pub fn main() !void
     try quat_inv_bench_zmath();
 
     try quat_rotate_vec_bench();
+
+    try quat_slerp_bench_kmath();
 
     std.debug.print("\tVectors: \n", .{});
     try mul_s_bench_kmath();
@@ -35,10 +41,13 @@ fn quat_mul_bench_kmath() !void
     const q2 = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64)} };
 
     std.debug.print("Warming up... ", .{});
-    const sum_q1 = @reduce(.Add, q1.values);
-    const sum_q2 = @reduce(.Add, q2.values);
-    std.mem.doNotOptimizeAway(&sum_q1);
-    std.mem.doNotOptimizeAway(&sum_q2);
+    for (0..WARMUP_ITERATIONS) |_|
+    {
+        const sum_q1 = @reduce(.Add, q1.values);
+        const sum_q2 = @reduce(.Add, q2.values);
+        std.mem.doNotOptimizeAway(&sum_q1);
+        std.mem.doNotOptimizeAway(&sum_q2);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -62,10 +71,13 @@ fn quat_mul_bench_zmath() !void
     const q2 = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32)};
 
     std.debug.print("Warming up... ", .{});
-    const sum_q1 = @reduce(.Add, q1);
-    const sum_q2 = @reduce(.Add, q2);
-    std.mem.doNotOptimizeAway(&sum_q1);
-    std.mem.doNotOptimizeAway(&sum_q2);
+    for (0..WARMUP_ITERATIONS) |_|
+    {
+        const sum_q1 = @reduce(.Add, q1);
+        const sum_q2 = @reduce(.Add, q2);
+        std.mem.doNotOptimizeAway(&sum_q1);
+        std.mem.doNotOptimizeAway(&sum_q2);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -89,8 +101,11 @@ fn quat_inv_bench_kmath() !void
     const q = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64) } };
 
     std.debug.print("Warming up... ", .{});
-    const sum_q = @reduce(.Add, q.values);
-    std.mem.doNotOptimizeAway(&sum_q);
+    for (0..WARMUP_ITERATIONS) |_|
+    {        
+        const sum_q = @reduce(.Add, q.values);
+        std.mem.doNotOptimizeAway(&sum_q);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -113,8 +128,11 @@ fn quat_inv_bench_zmath() !void
     const q = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32) };
     
     std.debug.print("Warming up... ", .{});
-    const sum_q = @reduce(.Add, q);
-    std.mem.doNotOptimizeAway(&sum_q);
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q = @reduce(.Add, q);
+        std.mem.doNotOptimizeAway(&sum_q);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -139,10 +157,13 @@ fn quat_rotate_vec_bench() !void
     const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
     
     std.debug.print("Warming up... ", .{});
-    const sum_q = @reduce(.Add, q.values);
-    std.mem.doNotOptimizeAway(&sum_q);
-    const sum_v = @reduce(.Add, v.values);
-    std.mem.doNotOptimizeAway(&sum_v);
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q = @reduce(.Add, q.values);
+        std.mem.doNotOptimizeAway(&sum_q);
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -167,10 +188,13 @@ fn mul_s_bench_kmath() !void
     const s = random.float(f64);
     
     std.debug.print("Warming up... ", .{});
-    const sum_v = @reduce(.Add, v.values);
-    std.mem.doNotOptimizeAway(&sum_v);
-    const r = s + random.float(f64);
-    std.mem.doNotOptimizeAway(&r); 
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+        const r = s + random.float(f64);
+        std.mem.doNotOptimizeAway(&r); 
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -193,8 +217,11 @@ fn mag_bench_kmath() !void
     const v = kmath.Vec3 { .values = .{ random.float(f64), random.float(f64), random.float(f64) } };
     
     std.debug.print("Warming up... ", .{});
-    const sum_v = @reduce(.Add, v.values);
-    std.mem.doNotOptimizeAway(&sum_v);
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -217,8 +244,11 @@ fn normalize_bench_kmath() !void
     const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
 
     std.debug.print("Warming up... ", .{});
-    const sum_v = @reduce(.Add, v.values);
-    std.mem.doNotOptimizeAway(&sum_v);
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+    }
 
     var timer = try std.time.Timer.start();        
     var elapsed_s: f64 = 0;
@@ -227,6 +257,39 @@ fn normalize_bench_kmath() !void
         for (0..ITERATIONS) |_|
         {
             const r = v.normalize();
+            std.mem.doNotOptimizeAway(&r);
+        }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+}
+
+fn quat_slerp_bench_kmath() !void
+{
+    std.debug.print("\t\tQuat slerp (f64): ", .{ });
+    const q_from = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
+    const q_to = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
+    const factor =  random.float(f64);
+
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q_from = @reduce(.Add, q_from.values);
+        std.mem.doNotOptimizeAway(&sum_q_from);
+        const sum_q_to = @reduce(.Add, q_to.values);
+        std.mem.doNotOptimizeAway(&sum_q_to);
+        const fr = factor * random.float(f64);
+        std.mem.doNotOptimizeAway(&fr);
+    }
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {            
+            const r = kmath.quaternions.slerp(q_from.values, q_to.values, factor);
             std.mem.doNotOptimizeAway(&r);
         }
         elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;

@@ -96,7 +96,7 @@ pub inline fn sub(v1: anytype, v2: anytype) @TypeOf(v1, v2)
     return v1 - v2;
 }
 
-pub inline fn dot(v1: anytype, v2: anytype) @typeInfo(v1).Vector.elem_type
+pub inline fn dot(v1: anytype, v2: anytype) @typeInfo(@TypeOf(v1, v2)).vector.child
 {
     @setFloatMode(.optimized);
     return @reduce(.Add, v1 * v2);
@@ -119,10 +119,10 @@ pub inline fn magnitude(v: anytype) @typeInfo(@TypeOf(v)).vector.child
 /// This will normalize the vector (includes the magnitude calculation) will return the vector unchaged if the magnitude is already 1. 
 pub inline fn normalize(v: anytype) @TypeOf(v)
 {
-    @setFloatMode(.optimized);
-    const eps = comptime std.math.floatEps(@typeInfo(@TypeOf(v)).vector.child);
+    @setFloatMode(.optimized);    
     const element_type = comptime @typeInfo(@TypeOf(v)).vector.child;
-    
+    const eps = comptime std.math.floatEps(element_type);
+
     const mag = magnitude(v);
     if (!std.math.approxEqAbs(element_type, mag, 1, eps))
     {
@@ -134,7 +134,7 @@ pub inline fn normalize(v: anytype) @TypeOf(v)
 
 /// This will normalize the vector (includes the magnitude calculation) will not check if the vector is already a unit vector
 /// Will return the normalized vector and its magnitude
-pub inline fn normalize_nocheck(v: anytype) @typeInfo(@TypeOf(v)).vector.child
+pub inline fn normalize_nocheck(v: anytype) @typeInfo(@TypeOf(v)).Vector.elem_type
 {
     @setFloatMode(.optimized);
     return normalize_with_magnitude(v, magnitude(v));
@@ -145,6 +145,11 @@ pub inline fn normalize_with_magnitude(q: anytype, mag: anytype) @TypeOf(q)
 {
     @setFloatMode(.optimized);
     return mul_s(q, 1 / mag);
+}
+
+pub inline fn negate(v: anytype) @TypeOf(v)
+{
+    return mul(v, @as(@TypeOf(v), @splat(-1)));
 }
 
 test "Magnitude"
