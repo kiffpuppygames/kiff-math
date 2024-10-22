@@ -1,476 +1,299 @@
-// -------------------------------------------------------------------------------------------------
-// kmath - benchmarks
-// -------------------------------------------------------------------------------------------------
-// 'zig build benchmark -Doptimize=ReleaseFast' will build and benchmakrs with all optimisations.
-//
-// -------------------------------------------------------------------------------------------------
-// 'AMD Ryzen 9 3950X 16-Core Processor', Windows 11, Zig 0.10.0-dev.2620+0e9458a3f, ReleaseFast
-// -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.5880s, kmath version: 1.0642s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.9318s, kmath version: 0.6888s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.2258s, kmath version: 1.1095s
-//            quaternion mul benchmark (AOS) - scalar version: 1.4123s, kmath version: 0.6958s
-//                      wave benchmark (SOA) - scalar version: 4.8165s, kmath version: 0.7338s
-//
-// -------------------------------------------------------------------------------------------------
-// 'AMD Ryzen 7 5800X 8-Core Processer', Linux 5.17.14, Zig 0.10.0-dev.2624+d506275a0, ReleaseFast
-// -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.3672s, kmath version: 0.8617s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6586s, kmath version: 0.4803s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.0620s, kmath version: 0.8942s
-//            quaternion mul benchmark (AOS) - scalar version: 1.1324s, kmath version: 0.6064s
-//                      wave benchmark (SOA) - scalar version: 3.6598s, kmath version: 0.4231s
-//
-// -------------------------------------------------------------------------------------------------
-// 'Apple M1 Max', macOS Version 12.4, Zig 0.10.0-dev.2657+74442f350, ReleaseFast
-// -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 1.0297s, kmath version: 1.0538s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 0.6294s, kmath version: 0.6532s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 0.9807s, kmath version: 1.0988s
-//            quaternion mul benchmark (AOS) - scalar version: 1.5413s, kmath version: 0.7800s
-//                      wave benchmark (SOA) - scalar version: 3.4220s, kmath version: 1.0255s
-//
-// -------------------------------------------------------------------------------------------------
-// '11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz', Windows 11, Zig 0.10.0-dev.2620+0e9458a3f, ReleaseFast
-// -------------------------------------------------------------------------------------------------
-//                matrix mul benchmark (AOS) - scalar version: 2.2308s, kmath version: 0.9376s
-//       cross3, scale, bias benchmark (AOS) - scalar version: 1.0821s, kmath version: 0.5110s
-// cross3, dot3, scale, bias benchmark (AOS) - scalar version: 1.6580s, kmath version: 0.9167s
-//            quaternion mul benchmark (AOS) - scalar version: 2.0139s, kmath version: 0.5856s
-//                      wave benchmark (SOA) - scalar version: 3.7832s, kmath version: 0.3642s
-//
-// -------------------------------------------------------------------------------------------------
-// '12th Gen Intel(R) Core(TM) i9-12900H @ 3.40GHz', Windows 11, Zig 0.14.0-dev.1307+849c31a6c, ReleaseFast
-// -------------------------------------------------------------------------------------------------
-//                 matrix mul benchmark (AOS) - scalar version: 0.8894s, kmath version: 0.7972s
-//        cross3, scale, bias benchmark (AOS) - scalar version: 0.5211s, kmath version: 0.3864s
-//  cross3, dot3, scale, bias benchmark (AOS) - scalar version: 0.8575s, kmath version: 0.8168s
-//             quaternion mul benchmark (AOS) - scalar version: 0.7081s, kmath version: 0.5534s
-//                       wave benchmark (SOA) - scalar version: 3.4510s, kmath version: 0.4903s
-//
-// -------------------------------------------------------------------------------------------------
-
 const std = @import("std");
-const km = @import("kmath");
+const kmath = @import("root.zig");
+const zmath = @import("zmath");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+var prng: std.Random.Xoshiro256 = undefined;
+var random: std.Random = undefined;
 
-    // m = mul(ma, mb); data set fits in L1 cache; AOS data layout.
-    try mat4MulBenchmark(allocator, 100_000);
+const ITERATIONS: usize = 500_000_000;
+const WARMUP_ITERATIONS: usize = 10_000;
+const RUNS: usize = 5;
 
-    // v = 0.01 * cross3(va, vb) + vec3(1.0); data set fits in L1 cache; AOS data layout.
-    try cross3ScaleBiasBenchmark(allocator, 10_000);
+pub fn main() !void 
+{
+    prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    random = prng.random();
 
-    // v = dot3(va, vb) * (0.1 * cross3(va, vb) + vec3(1.0)); data set fits in L1 cache; AOS data layout.
-    try cross3Dot3ScaleBiasBenchmark(allocator, 10_000);
+    std.debug.print("Running Benchmarks: (The average over {d} runs with {d} iterations each)\n", .{ RUNS, ITERATIONS });
 
-    // q = qmul(qa, qb); data set fits in L1 cache; AOS data layout.
-    try quatBenchmark(allocator, 10_000);
+    std.debug.print("\tQuaternions: \n", .{});
+    
+    try quat_mul_bench_kmath();
+    try quat_mul_bench_zmath();
+    
+    try quat_inv_bench_kmath();
+    try quat_inv_bench_zmath();
 
-    // d = sqrt(x * x + z * z); y = sin(d - t); SOA layout.
-    try waveBenchmark(allocator, 1_000);
+    try quat_rotate_vec_bench();
+
+    try quat_slerp_bench_kmath();
+
+    std.debug.print("\tVectors: \n", .{});
+    try mul_s_bench_kmath();
+    try mag_bench_kmath();
+    try normalize_bench_kmath();
 }
 
-var prng = std.Random.DefaultPrng.init(0);
-const random = prng.random();
+fn quat_mul_bench_kmath() !void
+{
+    std.debug.print("\t\tMultiplication KMath (f64): ", .{ });    
+    const q1 = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64)} };
+    const q2 = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64)} };
 
-noinline fn mat4MulBenchmark(allocator: std.mem.Allocator, comptime count: comptime_int) !void {
-    std.debug.print("\n", .{});
-    std.debug.print("{s:>42} - ", .{"matrix mul benchmark (AOS)"});
-
-    var data0 = std.ArrayList([16]f32).init(allocator);
-    defer data0.deinit();
-    var data1 = std.ArrayList([16]f32).init(allocator);
-    defer data1.deinit();
-
-    var i: usize = 0;
-    while (i < 64) : (i += 1) {
-        try data0.append([16]f32{
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-        });
-        try data1.append([16]f32{
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-            random.float(f32), random.float(f32), random.float(f32), random.float(f32),
-        });
-    }
-
-    // Warmup, fills L1 cache.
-    i = 0;
-    while (i < 100) : (i += 1) {
-        for (data1.items) |b| {
-            for (data0.items) |a| {
-                const ma = km.loadMat(a[0..]);
-                const mb = km.loadMat(b[0..]);
-                const r = km.mul(ma, mb);
-                std.mem.doNotOptimizeAway(&r);
-            }
-        }
-    }
-
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const r = [16]f32{
-                        a[0] * b[0] + a[1] * b[4] + a[2] * b[8] + a[3] * b[12],
-                        a[0] * b[1] + a[1] * b[5] + a[2] * b[9] + a[3] * b[13],
-                        a[0] * b[2] + a[1] * b[6] + a[2] * b[10] + a[3] * b[14],
-                        a[0] * b[3] + a[1] * b[7] + a[2] * b[11] + a[3] * b[15],
-                        a[4] * b[0] + a[5] * b[4] + a[6] * b[8] + a[7] * b[12],
-                        a[4] * b[1] + a[5] * b[5] + a[6] * b[9] + a[7] * b[13],
-                        a[4] * b[2] + a[5] * b[6] + a[6] * b[10] + a[7] * b[14],
-                        a[4] * b[3] + a[5] * b[7] + a[6] * b[11] + a[7] * b[15],
-                        a[8] * b[0] + a[9] * b[4] + a[10] * b[8] + a[11] * b[12],
-                        a[8] * b[1] + a[9] * b[5] + a[10] * b[9] + a[11] * b[13],
-                        a[8] * b[2] + a[9] * b[6] + a[10] * b[10] + a[11] * b[14],
-                        a[8] * b[3] + a[9] * b[7] + a[10] * b[11] + a[11] * b[15],
-                        a[12] * b[0] + a[13] * b[4] + a[14] * b[8] + a[15] * b[12],
-                        a[12] * b[1] + a[13] * b[5] + a[14] * b[9] + a[15] * b[13],
-                        a[12] * b[2] + a[13] * b[6] + a[14] * b[10] + a[15] * b[14],
-                        a[12] * b[3] + a[13] * b[7] + a[14] * b[11] + a[15] * b[15],
-                    };
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
-        }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
+        const sum_q1 = @reduce(.Add, q1.values);
+        const sum_q2 = @reduce(.Add, q2.values);
+        std.mem.doNotOptimizeAway(&sum_q1);
+        std.mem.doNotOptimizeAway(&sum_q2);
     }
 
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const ma = km.loadMat(a[0..]);
-                    const mb = km.loadMat(b[0..]);
-                    const r = km.mul(ma, mb);
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
+        for (0..ITERATIONS) |_|
+        {
+            const r = q1.mul(q2);
+            std.mem.doNotOptimizeAway(&r);
         }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
     }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS });  
 }
 
-noinline fn cross3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime count: comptime_int) !void {
-    std.debug.print("{s:>42} - ", .{"cross3, scale, bias benchmark (AOS)"});
+fn quat_mul_bench_zmath() !void
+{
+    std.debug.print("\t\tMultiplication ZMath (f32): ", .{ });
+    const q1 = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32)};
+    const q2 = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32)};
 
-    var data0 = std.ArrayList([3]f32).init(allocator);
-    defer data0.deinit();
-    var data1 = std.ArrayList([3]f32).init(allocator);
-    defer data1.deinit();
-
-    var i: usize = 0;
-    while (i < 256) : (i += 1) {
-        try data0.append([3]f32{ random.float(f32), random.float(f32), random.float(f32) });
-        try data1.append([3]f32{ random.float(f32), random.float(f32), random.float(f32) });
-    }
-
-    // Warmup, fills L1 cache.
-    i = 0;
-    while (i < 100) : (i += 1) {
-        for (data1.items) |b| {
-            for (data0.items) |a| {
-                const va = km.vectors.loadArr3(a);
-                const vb = km.vectors.loadArr3(b);
-                const cp = km.vectors.f32x4s(0.01) * km.cross3(va, vb) + km.vectors.f32x4s(1.0);
-                std.mem.doNotOptimizeAway(&cp);
-            }
-        }
-    }
-
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const r = [3]f32{
-                        0.01 * (a[1] * b[2] - a[2] * b[1]) + 1.0,
-                        0.01 * (a[2] * b[0] - a[0] * b[2]) + 1.0,
-                        0.01 * (a[0] * b[1] - a[1] * b[0]) + 1.0,
-                    };
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
-        }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
+        const sum_q1 = @reduce(.Add, q1);
+        const sum_q2 = @reduce(.Add, q2);
+        std.mem.doNotOptimizeAway(&sum_q1);
+        std.mem.doNotOptimizeAway(&sum_q2);
     }
 
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const va = km.vectors.loadArr3(a);
-                    const vb = km.vectors.loadArr3(b);
-                    const cp = km.vectors.f32x4s(0.01) * km.cross3(va, vb) + km.vectors.f32x4s(1.0);
-                    std.mem.doNotOptimizeAway(&cp);
-                }
-            }
+        for (0..ITERATIONS) |_|
+        {
+            const r = zmath.qmul(q1, q2);
+            std.mem.doNotOptimizeAway(&r);
         }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
-        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
-    }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    } 
+
+    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS});  
 }
 
-noinline fn cross3Dot3ScaleBiasBenchmark(allocator: std.mem.Allocator, comptime count: comptime_int) !void {
-    std.debug.print("{s:>42} - ", .{"cross3, dot3, scale, bias benchmark (AOS)"});
+fn quat_inv_bench_kmath() !void
+{
+    std.debug.print("\t\tInverse KMath (f64): ", .{ });    
+    const q = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64) } };
 
-    var data0 = std.ArrayList([3]f32).init(allocator);
-    defer data0.deinit();
-    var data1 = std.ArrayList([3]f32).init(allocator);
-    defer data1.deinit();
-
-    var i: usize = 0;
-    while (i < 256) : (i += 1) {
-        try data0.append([3]f32{ random.float(f32), random.float(f32), random.float(f32) });
-        try data1.append([3]f32{ random.float(f32), random.float(f32), random.float(f32) });
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {        
+        const sum_q = @reduce(.Add, q.values);
+        std.mem.doNotOptimizeAway(&sum_q);
     }
 
-    // Warmup, fills L1 cache.
-    i = 0;
-    while (i < 100) : (i += 1) {
-        for (data1.items) |b| {
-            for (data0.items) |a| {
-                const va = km.vectors.loadArr3(a);
-                const vb = km.vectors.loadArr3(b);
-                const r = (km.dot3(va, vb) * (km.vectors.f32x4s(0.1) * km.cross3(va, vb) + km.vectors.f32x4s(1.0)))[0];
-                std.mem.doNotOptimizeAway(&r);
-            }
-        }
-    }
-
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-                    const r = [3]f32{
-                        d * (0.1 * (a[1] * b[2] - a[2] * b[1]) + 1.0),
-                        d * (0.1 * (a[2] * b[0] - a[0] * b[2]) + 1.0),
-                        d * (0.1 * (a[0] * b[1] - a[1] * b[0]) + 1.0),
-                    };
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
+        for (0..ITERATIONS) |_|
+        {
+            const r = q.inverse();
+            std.mem.doNotOptimizeAway(&r);
         }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
     }
-
-    {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const va = km.vectors.loadArr3(a);
-                    const vb = km.vectors.loadArr3(b);
-                    const r = km.dot3(va, vb) * (km.vectors.f32x4s(0.1) * km.cross3(va, vb) + km.vectors.f32x4s(1.0));
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
-        }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
-    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS});  
 }
 
-noinline fn quatBenchmark(allocator: std.mem.Allocator, comptime count: comptime_int) !void {
-    std.debug.print("{s:>42} - ", .{"quaternion mul benchmark (AOS)"});
-
-    var data0 = std.ArrayList([4]f32).init(allocator);
-    defer data0.deinit();
-    var data1 = std.ArrayList([4]f32).init(allocator);
-    defer data1.deinit();
-
-    var i: usize = 0;
-    while (i < 256) : (i += 1) {
-        try data0.append([4]f32{ random.float(f32), random.float(f32), random.float(f32), random.float(f32) });
-        try data1.append([4]f32{ random.float(f32), random.float(f32), random.float(f32), random.float(f32) });
+fn quat_inv_bench_zmath() !void
+{    
+    std.debug.print("\t\tInverse ZMath (f32): ", .{});
+    const q = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32) };
+    
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q = @reduce(.Add, q);
+        std.mem.doNotOptimizeAway(&sum_q);
     }
 
-    // Warmup, fills L1 cache.
-    i = 0;
-    while (i < 100) : (i += 1) {
-        for (data1.items) |b| {
-            for (data0.items) |a| {
-                const va = km.vectors.loadArr4(a);
-                const vb = km.vectors.loadArr4(b);
-                const r = km.qmul(va, vb);
-                std.mem.doNotOptimizeAway(&r);
-            }
-        }
-    }
-
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
     {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const r = [4]f32{
-                        (b[3] * a[0]) + (b[0] * a[3]) + (b[1] * a[2]) - (b[2] * a[1]),
-                        (b[3] * a[1]) - (b[0] * a[2]) + (b[1] * a[3]) + (b[2] * a[0]),
-                        (b[3] * a[2]) + (b[0] * a[1]) - (b[1] * a[0]) + (b[2] * a[3]),
-                        (b[3] * a[3]) - (b[0] * a[0]) - (b[1] * a[1]) - (b[2] * a[2]),
-                    };
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
+        for (0..ITERATIONS) |_|
+        {
+            const r = zmath.inverse(q);
+            std.mem.doNotOptimizeAway(&r);
         }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
-        std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
-    }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }  
 
-    {
-        i = 0;
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-        while (i < count) : (i += 1) {
-            for (data1.items) |b| {
-                for (data0.items) |a| {
-                    const va = km.vectors.loadArr4(a);
-                    const vb = km.vectors.loadArr4(b);
-                    const r = km.qmul(va, vb);
-                    std.mem.doNotOptimizeAway(&r);
-                }
-            }
-        }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
-    }
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});    
 }
 
-noinline fn waveBenchmark(allocator: std.mem.Allocator, comptime count: comptime_int) !void {
-    _ = allocator;
-    std.debug.print("{s:>42} - ", .{"wave benchmark (SOA)"});
-
-    const grid_size = 1024;
-    {
-        var t: f32 = 0.0;
-
-        const scale: f32 = 0.05;
-
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-
-        var iter: usize = 0;
-        while (iter < count) : (iter += 1) {
-            var z_index: i32 = 0;
-            while (z_index < grid_size) : (z_index += 1) {
-                const z = scale * @as(f32, @floatFromInt(z_index - grid_size / 2));
-
-                var x_index: i32 = 0;
-                while (x_index < grid_size) : (x_index += 4) {
-                    const x0 = scale * @as(f32, @floatFromInt(x_index + 0 - grid_size / 2));
-                    const x1 = scale * @as(f32, @floatFromInt(x_index + 1 - grid_size / 2));
-                    const x2 = scale * @as(f32, @floatFromInt(x_index + 2 - grid_size / 2));
-                    const x3 = scale * @as(f32, @floatFromInt(x_index + 3 - grid_size / 2));
-
-                    const d0 = km.sqrt(x0 * x0 + z * z);
-                    const d1 = km.sqrt(x1 * x1 + z * z);
-                    const d2 = km.sqrt(x2 * x2 + z * z);
-                    const d3 = km.sqrt(x3 * x3 + z * z);
-
-                    const y0 = km.sin(d0 - t);
-                    const y1 = km.sin(d1 - t);
-                    const y2 = km.sin(d2 - t);
-                    const y3 = km.sin(d3 - t);
-
-                    std.mem.doNotOptimizeAway(&y0);
-                    std.mem.doNotOptimizeAway(&y1);
-                    std.mem.doNotOptimizeAway(&y2);
-                    std.mem.doNotOptimizeAway(&y3);
-                }
-            }
-            t += 0.001;
-        }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
-
-        std.debug.print("scalar version: {d:.4}s, ", .{elapsed_s});
+fn quat_rotate_vec_bench() !void
+{
+    std.debug.print("\t\tRotate Vec (f64): ", .{});
+    const q = kmath.Quat.new(random.float(f64), random.float(f64), random.float(f64), random.float(f64));    
+    const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
+    
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q = @reduce(.Add, q.values);
+        std.mem.doNotOptimizeAway(&sum_q);
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
     }
 
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
     {
-        const T = km.vectors.F32x16;
-
-        const static = struct {
-            const offsets = [16]f32{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-        };
-        const voffset = km.vectors.load(static.offsets[0..], T, 0);
-        var vt = km.vectors.splat(T, 0.0);
-
-        const scale: f32 = 0.05;
-
-        var timer = try std.time.Timer.start();
-        const start = timer.lap();
-
-        var iter: usize = 0;
-        while (iter < count) : (iter += 1) {
-            var z_index: i32 = 0;
-            while (z_index < grid_size) : (z_index += 1) {
-                const z = scale * @as(f32, @floatFromInt(z_index - grid_size / 2));
-                const vz = km.vectors.splat(T, z);
-
-                var x_index: i32 = 0;
-                while (x_index < grid_size) : (x_index += km.vectors.veclen(T)) {
-                    const x = scale * @as(f32, @floatFromInt(x_index - grid_size / 2));
-                    const vx = km.vectors.splat(T, x) + voffset * km.vectors.splat(T, scale);
-
-                    const d = km.sqrt(vx * vx + vz * vz);
-
-                    const vy = km.sin(d - vt);
-
-                    std.mem.doNotOptimizeAway(&vy);
-                }
-            }
-            vt += km.vectors.splat(T, 0.001);
+        for (0..ITERATIONS) |_|
+        {
+            const r = q.normalize().apply_to_vector(v);
+            std.mem.doNotOptimizeAway(&r);
         }
-        const end = timer.read();
-        const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
 
-        std.debug.print("kmath version: {d:.4}s\n", .{elapsed_s});
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }  
+
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});    
+}
+
+fn mul_s_bench_kmath() !void
+{
+    std.debug.print("\t\tMultiply Scalar KMath (f64): ", .{ });
+    const v = kmath.Vec3 { .values = .{ random.float(f64), random.float(f64), random.float(f64) } };
+    const s = random.float(f64);
+    
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+        const r = s + random.float(f64);
+        std.mem.doNotOptimizeAway(&r); 
     }
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {
+            const prod = v.mull_s(s);
+            std.mem.doNotOptimizeAway(&prod);
+        }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+}
+
+fn mag_bench_kmath() !void
+{
+    std.debug.print("\t\tMagnitude KMath (f64): ", .{ });
+    const v = kmath.Vec3 { .values = .{ random.float(f64), random.float(f64), random.float(f64) } };
+    
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+    }
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {
+            const r = v.mag();
+            std.mem.doNotOptimizeAway(&r);
+        }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+}
+
+fn normalize_bench_kmath() !void
+{
+    std.debug.print("\t\tNormalize KMath (f64): ", .{ });
+    const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
+
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_v = @reduce(.Add, v.values);
+        std.mem.doNotOptimizeAway(&sum_v);
+    }
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {
+            const r = v.normalize();
+            std.mem.doNotOptimizeAway(&r);
+        }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+}
+
+fn quat_slerp_bench_kmath() !void
+{
+    std.debug.print("\t\tQuat slerp (f64): ", .{ });
+    const q_from = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
+    const q_to = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
+    const factor =  random.float(f64);
+
+    std.debug.print("Warming up... ", .{});
+    for (0..WARMUP_ITERATIONS) |_|
+    {  
+        const sum_q_from = @reduce(.Add, q_from.values);
+        std.mem.doNotOptimizeAway(&sum_q_from);
+        const sum_q_to = @reduce(.Add, q_to.values);
+        std.mem.doNotOptimizeAway(&sum_q_to);
+        const fr = factor * random.float(f64);
+        std.mem.doNotOptimizeAway(&fr);
+    }
+
+    var timer = try std.time.Timer.start();        
+    var elapsed_s: f64 = 0;
+    for (0..RUNS) |_| 
+    {
+        for (0..ITERATIONS) |_|
+        {            
+            const r = kmath.quaternions.slerp(q_from.values, q_to.values, factor);
+            std.mem.doNotOptimizeAway(&r);
+        }
+        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
+    }
+    
+    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
 }
