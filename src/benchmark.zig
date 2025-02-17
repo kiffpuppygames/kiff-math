@@ -1,299 +1,97 @@
 const std = @import("std");
 const kmath = @import("root.zig");
-const zmath = @import("zmath");
+const zbench = @import("zbench");
 
-var prng: std.Random.Xoshiro256 = undefined;
-var random: std.Random = undefined;
-
-const ITERATIONS: usize = 500_000_000;
-const WARMUP_ITERATIONS: usize = 10_000;
+const ITERATIONS: usize = 3_000_000_000;
+const TIME_LIMIT: usize = 2_000_000_000;
 const RUNS: usize = 5;
+
+const a: f64 = 1.23456789012345678901234567890123456789;
+const b: f64 = -9.87654321098765432109876543210987654321;
+const c: f64 = 3.141592653589793238462643383279502884197;
+const d: f64 = -2.718281828459045235360287471352662497757;
+
+const q1 = kmath.Quat { .values = .{a, b, c, d} };
+const q2 = kmath.Quat { .values = .{d, c, b, a} };
+const v1 = kmath.Vec3 { .values = .{ b, c, d } };
+const v2 = kmath.Vec3 { .values = .{ a, d, b } };
 
 pub fn main() !void 
 {
-    prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
-    random = prng.random();
+    const stdout = std.io.getStdOut().writer();
+    var bench = zbench.Benchmark.init(std.heap.page_allocator, .{ .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT * 7 });
+    defer bench.deinit();
 
-    std.debug.print("Running Benchmarks: (The average over {d} runs with {d} iterations each)\n", .{ RUNS, ITERATIONS });
+    try bench.add("Quaternion Multiplication", quat_mul_bench_kmath, .{ .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Quaternion Inverse", quat_inv_bench_kmath, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Quaternion Rotate", quat_rotate_vec_bench, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Quaternion Slerp", quat_slerp_bench_kmath, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Vec3 Scalar Multiplication", mul_s_bench_kmath, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Vec3 Magnitude", mag_bench_kmath, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
+    try bench.add("Vec3 Normalize", normalize_bench_kmath, .{  .max_iterations = ITERATIONS, .time_budget_ns = TIME_LIMIT });
 
-    std.debug.print("\tQuaternions: \n", .{});
-    
-    try quat_mul_bench_kmath();
-    try quat_mul_bench_zmath();
-    
-    try quat_inv_bench_kmath();
-    try quat_inv_bench_zmath();
+    try stdout.writeAll("\n");
 
-    try quat_rotate_vec_bench();
+    warm_cpu();
 
-    try quat_slerp_bench_kmath();
-
-    std.debug.print("\tVectors: \n", .{});
-    try mul_s_bench_kmath();
-    try mag_bench_kmath();
-    try normalize_bench_kmath();
+    try bench.run(stdout);
 }
 
-fn quat_mul_bench_kmath() !void
+fn warm_cpu() void 
 {
-    std.debug.print("\t\tMultiplication KMath (f64): ", .{ });    
-    const q1 = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64)} };
-    const q2 = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64)} };
-
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {
-        const sum_q1 = @reduce(.Add, q1.values);
-        const sum_q2 = @reduce(.Add, q2.values);
-        std.mem.doNotOptimizeAway(&sum_q1);
-        std.mem.doNotOptimizeAway(&sum_q2);
+    var sum: f64 = 0;
+    const num_iterations: u32 = 1000000;
+    for (0..num_iterations) |i| {
+        sum += @as(f64, @floatFromInt(i)) * @as(f64, @floatFromInt(i));
     }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = q1.mul(q2);
-            std.mem.doNotOptimizeAway(&r);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS });  
+    std.mem.doNotOptimizeAway(&sum);
 }
 
-fn quat_mul_bench_zmath() !void
+fn quat_mul_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tMultiplication ZMath (f32): ", .{ });
-    const q1 = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32)};
-    const q2 = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32)};
-
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {
-        const sum_q1 = @reduce(.Add, q1);
-        const sum_q2 = @reduce(.Add, q2);
-        std.mem.doNotOptimizeAway(&sum_q1);
-        std.mem.doNotOptimizeAway(&sum_q2);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = zmath.qmul(q1, q2);
-            std.mem.doNotOptimizeAway(&r);
-        }
-
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    } 
-
-    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS});  
+    _ = allocator;
+    const r = q1.mul(q2);
+    std.mem.doNotOptimizeAway(&r);
 }
 
-fn quat_inv_bench_kmath() !void
+fn quat_inv_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tInverse KMath (f64): ", .{ });    
-    const q = kmath.Quat { .values = .{random.float(f64), random.float(f64), random.float(f64), random.float(f64) } };
-
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {        
-        const sum_q = @reduce(.Add, q.values);
-        std.mem.doNotOptimizeAway(&sum_q);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = q.inverse();
-            std.mem.doNotOptimizeAway(&r);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{ elapsed_s / RUNS});  
+    _ = allocator;
+    const r = q1.inverse();
+    std.mem.doNotOptimizeAway(&r);
 }
 
-fn quat_inv_bench_zmath() !void
-{    
-    std.debug.print("\t\tInverse ZMath (f32): ", .{});
-    const q = zmath.Quat { random.float(f32), random.float(f32), random.float(f32), random.float(f32) };
-    
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_q = @reduce(.Add, q);
-        std.mem.doNotOptimizeAway(&sum_q);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = zmath.inverse(q);
-            std.mem.doNotOptimizeAway(&r);
-        }
-
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }  
-
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});    
-}
-
-fn quat_rotate_vec_bench() !void
+fn quat_rotate_vec_bench(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tRotate Vec (f64): ", .{});
-    const q = kmath.Quat.new(random.float(f64), random.float(f64), random.float(f64), random.float(f64));    
-    const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
-    
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_q = @reduce(.Add, q.values);
-        std.mem.doNotOptimizeAway(&sum_q);
-        const sum_v = @reduce(.Add, v.values);
-        std.mem.doNotOptimizeAway(&sum_v);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = q.normalize().apply_to_vector(v);
-            std.mem.doNotOptimizeAway(&r);
-        }
-
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }  
-
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});    
+    _ = allocator;
+    const r = q2.normalize().apply_to_vector(v2);
+    std.mem.doNotOptimizeAway(&r);
 }
 
-fn mul_s_bench_kmath() !void
+fn mul_s_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tMultiply Scalar KMath (f64): ", .{ });
-    const v = kmath.Vec3 { .values = .{ random.float(f64), random.float(f64), random.float(f64) } };
-    const s = random.float(f64);
-    
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_v = @reduce(.Add, v.values);
-        std.mem.doNotOptimizeAway(&sum_v);
-        const r = s + random.float(f64);
-        std.mem.doNotOptimizeAway(&r); 
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const prod = v.mull_s(s);
-            std.mem.doNotOptimizeAway(&prod);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+    _ = allocator;
+    const prod = v1.mull_s(a);
+    std.mem.doNotOptimizeAway(&prod);
 }
 
-fn mag_bench_kmath() !void
+fn mag_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tMagnitude KMath (f64): ", .{ });
-    const v = kmath.Vec3 { .values = .{ random.float(f64), random.float(f64), random.float(f64) } };
-    
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_v = @reduce(.Add, v.values);
-        std.mem.doNotOptimizeAway(&sum_v);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = v.mag();
-            std.mem.doNotOptimizeAway(&r);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+    _ = allocator;
+    const r = v1.mag();
+    std.mem.doNotOptimizeAway(&r);
 }
 
-fn normalize_bench_kmath() !void
+fn normalize_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tNormalize KMath (f64): ", .{ });
-    const v = kmath.Vec3.new(random.float(f64), random.float(f64), random.float(f64));
-
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_v = @reduce(.Add, v.values);
-        std.mem.doNotOptimizeAway(&sum_v);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {
-            const r = v.normalize();
-            std.mem.doNotOptimizeAway(&r);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+    _ = allocator;
+    const r = v2.normalize();
+    std.mem.doNotOptimizeAway(&r);
 }
 
-fn quat_slerp_bench_kmath() !void
+fn quat_slerp_bench_kmath(allocator: std.mem.Allocator) void
 {
-    std.debug.print("\t\tQuat slerp (f64): ", .{ });
-    const q_from = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
-    const q_to = kmath.Quat.new(random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3, random.float(f64) * 3);
-    const factor =  random.float(f64);
-
-    std.debug.print("Warming up... ", .{});
-    for (0..WARMUP_ITERATIONS) |_|
-    {  
-        const sum_q_from = @reduce(.Add, q_from.values);
-        std.mem.doNotOptimizeAway(&sum_q_from);
-        const sum_q_to = @reduce(.Add, q_to.values);
-        std.mem.doNotOptimizeAway(&sum_q_to);
-        const fr = factor * random.float(f64);
-        std.mem.doNotOptimizeAway(&fr);
-    }
-
-    var timer = try std.time.Timer.start();        
-    var elapsed_s: f64 = 0;
-    for (0..RUNS) |_| 
-    {
-        for (0..ITERATIONS) |_|
-        {            
-            const r = kmath.quaternions.slerp(q_from.values, q_to.values, factor);
-            std.mem.doNotOptimizeAway(&r);
-        }
-        elapsed_s += @as(f64, @floatFromInt(timer.lap())) / std.time.ns_per_s;
-    }
-    
-    std.debug.print("Time taken: {d:.4}s\n", .{elapsed_s / RUNS});
+    _ = allocator;    
+    const r = kmath.quaternions.slerp(q1.values, q2.values, d);
+    std.mem.doNotOptimizeAway(&r);
 }

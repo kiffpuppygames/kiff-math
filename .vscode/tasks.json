@@ -27,14 +27,14 @@
                 "test",
                 "-femit-bin=zig-out/bin/test",
                 "--test-no-exec",
-                "src/root.zig"             
+                "src/tests.zig"             
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
             "group": {
                 "kind": "build",
-                "isDefault": true
+                //"isDefault": true
             },
             "problemMatcher": [ "$zig" ]
         },
@@ -53,7 +53,7 @@
             },
             "group": {
                 "kind": "build",
-                "isDefault": true
+                //"isDefault": true
             },
             "problemMatcher": [ "$zig" ]
         },
@@ -74,7 +74,7 @@
                 "isDefault": true
             },
             "problemMatcher": [ "$zig" ],
-            "dependsOn": [ "Build and Run Tests" ],
+            //"dependsOn": [ "Build and Run Tests" ],
         }
     ]
 }
